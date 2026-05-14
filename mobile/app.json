@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Alo Çukur Hattı",
+    "slug": "alocukurhatti",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E53935"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E53935"
+      },
+      "package": "com.talha.alocukurhatti",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.talha.alocukurhatti",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Çukurun konumunu otomatik tespit etmek için konum iznine ihtiyacımız var.",
+        "NSCameraUsageDescription": "Çukurun fotoğrafını çekmek için kamera iznine ihtiyacımız var.",
+        "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor."
+      }
+    },
+    "plugins": [
+      [
+        "@rnmapbox/mapbox-gl",
+        {
+          "RNMapboxMapsImpl": "mapbox",
+          "RNMapboxMapsDownloadToken": "MAPBOX_SK_TOKEN"
+        }
+      ],
+      "expo-location",
+      "expo-image-picker",
+      "expo-camera"
+    ]
+  }
+}
