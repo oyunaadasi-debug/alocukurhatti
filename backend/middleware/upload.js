@@ -1,21 +1,8 @@
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const { put, del } = require('@vercel/blob');
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'alocukurhatti/reports',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'heic'],
-    transformation: [{ width: 1200, crop: 'limit', quality: 'auto' }],
-  },
-});
+// Dosyaları bellekte tut — Vercel Blob'a sonradan yükle
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -28,4 +15,22 @@ const upload = multer({
   },
 });
 
-module.exports = { upload, cloudinary };
+async function uploadToBlob(file) {
+  const ext = file.originalname.split('.').pop() || 'jpg';
+  const filename = `reports/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const blob = await put(filename, file.buffer, {
+    access: 'public',
+    contentType: file.mimetype,
+  });
+  return { url: blob.url, pathname: blob.pathname };
+}
+
+async function deleteFromBlob(url) {
+  try {
+    await del(url);
+  } catch {
+    // Sessizce geç — zaten silinmiş olabilir
+  }
+}
+
+module.exports = { upload, uploadToBlob, deleteFromBlob };

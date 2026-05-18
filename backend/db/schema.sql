@@ -1,68 +1,58 @@
--- Alo Çukur Hattı — Veritabanı Şeması
--- PostgreSQL + PostGIS gerektirir
+-- Alo Çukur Hattı — Veritabanı Şeması (PostGIS gerektirmez)
 
-CREATE EXTENSION IF NOT EXISTS postgis;
-
--- Kullanıcılar (opsiyonel kayıt)
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE,
   password_hash TEXT,
   name TEXT,
-  role VARCHAR(20) DEFAULT 'citizen', -- citizen | municipality | admin
-  municipality_code TEXT,             -- belediye memuru için ilçe kodu
+  role VARCHAR(20) DEFAULT 'citizen',
+  municipality_code TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Raporlar
 CREATE TABLE IF NOT EXISTS reports (
   id SERIAL PRIMARY KEY,
   lat DOUBLE PRECISION NOT NULL,
   lng DOUBLE PRECISION NOT NULL,
-  geom GEOGRAPHY(POINT, 4326),        -- PostGIS konum (yakınlık sorguları için)
-  address TEXT,                        -- tersine geocoding ile doldurulur
+  address TEXT,
   city TEXT,
   district TEXT,
-  photo_url TEXT NOT NULL,             -- Cloudinary URL
-  photo_public_id TEXT,                -- Cloudinary public_id (silme için)
+  photo_url TEXT NOT NULL,
+  photo_public_id TEXT,
   description TEXT,
-  reporter_name TEXT,                  -- NULL = anonim
-  reporter_ip TEXT,                    -- spam kontrolü için
+  reporter_name TEXT,
+  reporter_ip TEXT,
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  status VARCHAR(20) DEFAULT 'open',   -- open | forwarded | reviewing | resolved | rejected
+  status VARCHAR(20) DEFAULT 'open',
   me_too_count INTEGER DEFAULT 0,
-  moderation_status VARCHAR(20) DEFAULT 'approved', -- approved | rejected | pending
+  moderation_status VARCHAR(20) DEFAULT 'approved',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Coğrafi indeks (yakınlık sorguları için kritik)
-CREATE INDEX IF NOT EXISTS reports_geom_idx ON reports USING GIST (geom);
 CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status);
 CREATE INDEX IF NOT EXISTS reports_city_idx ON reports (city);
+CREATE INDEX IF NOT EXISTS reports_lat_lng_idx ON reports (lat, lng);
 
--- Ben de gördüm
 CREATE TABLE IF NOT EXISTS me_too (
   id SERIAL PRIMARY KEY,
   report_id INTEGER NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   reporter_ip TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(report_id, reporter_ip)       -- aynı IP 2x oy veremesin
+  UNIQUE(report_id, reporter_ip)
 );
 
--- Çözüm kanıtları
 CREATE TABLE IF NOT EXISTS resolutions (
   id SERIAL PRIMARY KEY,
   report_id INTEGER NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
   resolved_by INTEGER REFERENCES users(id),
-  resolver_role VARCHAR(20),           -- citizen | municipality | admin
+  resolver_role VARCHAR(20),
   photo_url TEXT,
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Uygunsuz içerik bildirimleri (3+ şikayet → flagged)
 CREATE TABLE IF NOT EXISTS report_flags (
   id SERIAL PRIMARY KEY,
   report_id INTEGER NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
@@ -71,29 +61,26 @@ CREATE TABLE IF NOT EXISTS report_flags (
   UNIQUE(report_id, reporter_ip)
 );
 
--- Push notification token'ları
 CREATE TABLE IF NOT EXISTS push_tokens (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   token TEXT NOT NULL,
-  platform VARCHAR(10),             -- ios | android
+  platform VARCHAR(10),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(token)
 );
 
--- Bildirim geçmişi
 CREATE TABLE IF NOT EXISTS notifications (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   report_id INTEGER REFERENCES reports(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,        -- status_changed | me_too | resolved
+  type VARCHAR(50) NOT NULL,
   title TEXT,
   body TEXT,
   sent_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Belediye webhook entegrasyonları
 CREATE TABLE IF NOT EXISTS municipality_webhooks (
   id SERIAL PRIMARY KEY,
   city TEXT NOT NULL,
@@ -104,7 +91,6 @@ CREATE TABLE IF NOT EXISTS municipality_webhooks (
   UNIQUE(city)
 );
 
--- Belediye iletim geçmişi
 CREATE TABLE IF NOT EXISTS municipality_log (
   id SERIAL PRIMARY KEY,
   report_id INTEGER REFERENCES reports(id) ON DELETE SET NULL,
@@ -115,16 +101,16 @@ CREATE TABLE IF NOT EXISTS municipality_log (
   sent_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- geom otomatik güncellemesi için trigger
-CREATE OR REPLACE FUNCTION update_report_geom()
+-- updated_at otomatik güncelleme
+CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.geom = ST_SetSRID(ST_MakePoint(NEW.lng, NEW.lat), 4326)::geography;
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER report_geom_trigger
-  BEFORE INSERT OR UPDATE ON reports
-  FOR EACH ROW EXECUTE FUNCTION update_report_geom();
+DROP TRIGGER IF EXISTS reports_updated_at ON reports;
+CREATE TRIGGER reports_updated_at
+  BEFORE UPDATE ON reports
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
