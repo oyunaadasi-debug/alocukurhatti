@@ -33,14 +33,12 @@
         "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor."
       }
     },
+    "extra": {
+      "eas": {
+        "projectId": "BURAYA-EAS-PROJECT-ID-YAZILACAK"
+      }
+    },
     "plugins": [
-      [
-        "@rnmapbox/mapbox-gl",
-        {
-          "RNMapboxMapsImpl": "mapbox",
-          "RNMapboxMapsDownloadToken": "MAPBOX_SK_TOKEN"
-        }
-      ],
       "expo-location",
       "expo-image-picker",
       "expo-camera"

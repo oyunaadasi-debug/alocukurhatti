@@ -1,18 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
-import MapboxGL from '@rnmapbox/mapbox-gl';
+import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
-import { API_URL, MAPBOX_TOKEN } from '../config';
-
-MapboxGL.setAccessToken(MAPBOX_TOKEN);
+import { API_URL } from '../config';
 
 type Report = {
   id: number; lat: number; lng: number;
   address: string; city: string; district: string;
   me_too_count: number; status: string; created_at: string;
+};
+
+const STATUS_PIN: Record<string, string> = {
+  open:      C.primary,
+  forwarded: C.warning,
+  reviewing: C.secondary,
+  resolved:  C.success,
 };
 
 export default function MapScreen({ navigation, route }: any) {
@@ -21,11 +26,16 @@ export default function MapScreen({ navigation, route }: any) {
   const centerLat: number | undefined      = route?.params?.centerLat;
   const centerLng: number | undefined      = route?.params?.centerLng;
 
-  const cameraRef = useRef<MapboxGL.Camera>(null);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const [reports, setReports]   = useState<Report[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [userLoc, setUserLoc]   = useState<{ lat: number; lng: number } | null>(null);
   const [selected, setSelected] = useState<Report | null>(null);
+  const [region, setRegion]     = useState<Region>({
+    latitude: centerLat ?? 39.0, longitude: centerLng ?? 35.0,
+    latitudeDelta: filterDistrict ? 0.05 : filterCity ? 0.5 : 8,
+    longitudeDelta: filterDistrict ? 0.05 : filterCity ? 0.5 : 8,
+  });
 
   useEffect(() => { load(); }, [filterCity, filterDistrict]);
 
@@ -33,22 +43,16 @@ export default function MapScreen({ navigation, route }: any) {
     setLoading(true);
     try {
       let lat = centerLat ?? 39.0, lng = centerLng ?? 35.0;
-      let zoomLevel = filterDistrict ? 13 : filterCity ? 10 : 5;
 
       if (!filterCity && !centerLat) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           lat = loc.coords.latitude; lng = loc.coords.longitude;
-          setUserLoc({ lat, lng }); zoomLevel = 13;
+          setUserLoc({ lat, lng });
+          setRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.05, longitudeDelta: 0.05 });
         }
       }
-
-      cameraRef.current?.setCamera({
-        centerCoordinate: [lng, lat],
-        zoomLevel,
-        animationDuration: 800,
-      });
 
       const { data } = await axios.get(`${API_URL}/reports`, {
         params: { lat: !filterCity ? lat : undefined, lng: !filterCity ? lng : undefined, radius: 50, city: filterCity },
@@ -64,11 +68,10 @@ export default function MapScreen({ navigation, route }: any) {
 
   function goToUser() {
     if (!userLoc) return;
-    cameraRef.current?.setCamera({
-      centerCoordinate: [userLoc.lng, userLoc.lat],
-      zoomLevel: 15,
-      animationDuration: 500,
-    });
+    mapRef.current?.animateToRegion({
+      latitude: userLoc.lat, longitude: userLoc.lng,
+      latitudeDelta: 0.02, longitudeDelta: 0.02,
+    }, 500);
   }
 
   const badgeLabel = filterDistrict
@@ -78,31 +81,28 @@ export default function MapScreen({ navigation, route }: any) {
 
   return (
     <View style={s.container}>
-      <MapboxGL.MapView
+      <MapView
+        ref={mapRef}
         style={s.map}
-        styleURL="mapbox://styles/mapbox/streets-v12"
+        provider={PROVIDER_GOOGLE}
+        initialRegion={region}
         onPress={() => setSelected(null)}
+        showsUserLocation
+        showsMyLocationButton={false}
       >
-        <MapboxGL.Camera
-          ref={cameraRef}
-          defaultSettings={{ centerCoordinate: [35, 39], zoomLevel: 5 }}
-        />
-        <MapboxGL.UserLocation visible animated />
-
         {reports.map(r => (
-          <MapboxGL.PointAnnotation
-            key={String(r.id)}
-            id={`pin-${r.id}`}
-            coordinate={[r.lng, r.lat]}
-            onSelected={() => setSelected(r)}
-            onDeselected={() => setSelected(null)}
+          <Marker
+            key={r.id}
+            coordinate={{ latitude: r.lat, longitude: r.lng }}
+            onPress={() => setSelected(r)}
+            tracksViewChanges={false}
           >
-            <View style={s.pin}>
+            <View style={[s.pin, { backgroundColor: STATUS_PIN[r.status] ?? C.primary }]}>
               <View style={s.pinDot} />
             </View>
-          </MapboxGL.PointAnnotation>
+          </Marker>
         ))}
-      </MapboxGL.MapView>
+      </MapView>
 
       {loading && (
         <View style={s.loadingOverlay}>
@@ -158,19 +158,19 @@ export default function MapScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  map: { flex: 1 },
+  map:       { flex: 1 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.55)',
   },
 
-  pin: { alignItems: 'center', justifyContent: 'center', width: 24, height: 24 },
-  pinDot: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: C.primary,
+  pin: {
+    width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
   },
+  pinDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
 
   countBadge: {
     position: 'absolute', top: 14, alignSelf: 'center',
@@ -182,7 +182,7 @@ const s = StyleSheet.create({
 
   card: {
     position: 'absolute', bottom: 106, left: 16, right: 16,
-    backgroundColor: C.canvas, borderRadius: R.xl,
+    backgroundColor: C.canvas, borderRadius: R.xxl,
     padding: S.lg, gap: S.xs,
   },
   cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },

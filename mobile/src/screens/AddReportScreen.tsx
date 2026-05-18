@@ -4,34 +4,32 @@ import {
   Image, StyleSheet, Alert, ActivityIndicator,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
-import MapboxGL from '@rnmapbox/mapbox-gl';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
 import { PillBtn, Divider, SectionTitle } from '../components/ui';
-import { API_URL, MAPBOX_TOKEN } from '../config';
-
-MapboxGL.setAccessToken(MAPBOX_TOKEN);
+import { API_URL } from '../config';
 
 export default function AddReportScreen({ route, navigation }: any) {
   const passedLoc = route?.params?.userLocation;
 
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+  const [coords, setCoords]     = useState<{ lat: number; lng: number } | null>(
     passedLoc ? { lat: passedLoc.lat, lng: passedLoc.lng } : null
   );
-  const [address, setAddress]     = useState('');
-  const [city, setCity]           = useState('');
-  const [district, setDistrict]   = useState('');
-  const [photo, setPhoto]         = useState<string | null>(null);
-  const [description, setDesc]    = useState('');
-  const [name, setName]           = useState('');
-  const [manualMode, setManual]   = useState(false);
-  const [locating, setLocating]   = useState(!passedLoc);
-  const [submitting, setSubmit]   = useState(false);
+  const [address, setAddress]   = useState('');
+  const [city, setCity]         = useState('');
+  const [district, setDistrict] = useState('');
+  const [photo, setPhoto]       = useState<string | null>(null);
+  const [description, setDesc]  = useState('');
+  const [name, setName]         = useState('');
+  const [manualMode, setManual] = useState(false);
+  const [locating, setLocating] = useState(!passedLoc);
+  const [submitting, setSubmit] = useState(false);
 
-  const cameraRef = useRef<MapboxGL.Camera>(null);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     if (!passedLoc) getLocation();
@@ -46,11 +44,7 @@ export default function AddReportScreen({ route, navigation }: any) {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const { latitude: lat, longitude: lng } = loc.coords;
       setCoords({ lat, lng });
-      cameraRef.current?.setCamera({
-        centerCoordinate: [lng, lat],
-        zoomLevel: 16,
-        animationDuration: 500,
-      });
+      mapRef.current?.animateToRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 500);
       await reverseGeo(lat, lng);
     } catch {
       setManual(true);
@@ -70,9 +64,9 @@ export default function AddReportScreen({ route, navigation }: any) {
     } catch {}
   }
 
-  function onMapPress(feature: any) {
+  function onMapPress(e: any) {
     if (!manualMode) return;
-    const [lng, lat] = feature.geometry.coordinates as [number, number];
+    const { latitude: lat, longitude: lng } = e.nativeEvent.coordinate;
     setCoords({ lat, lng });
     reverseGeo(lat, lng);
   }
@@ -127,6 +121,9 @@ export default function AddReportScreen({ route, navigation }: any) {
   }
 
   const addrLine = [address, district, city].filter(Boolean).join(', ');
+  const initialRegion = coords
+    ? { latitude: coords.lat, longitude: coords.lng, latitudeDelta: 0.005, longitudeDelta: 0.005 }
+    : { latitude: 39.0, longitude: 35.0, latitudeDelta: 8, longitudeDelta: 8 };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -135,29 +132,19 @@ export default function AddReportScreen({ route, navigation }: any) {
         {/* ── Konum ── */}
         <SectionTitle text={locating ? 'Konum tespit ediliyor…' : 'Konum'} />
         <View style={[s.mapBox, elevation(1)]}>
-          <MapboxGL.MapView
+          <MapView
+            ref={mapRef}
             style={s.map}
-            styleURL="mapbox://styles/mapbox/streets-v12"
+            provider={PROVIDER_GOOGLE}
+            initialRegion={initialRegion}
             onPress={onMapPress}
           >
-            <MapboxGL.Camera
-              ref={cameraRef}
-              defaultSettings={{
-                centerCoordinate: coords ? [coords.lng, coords.lat] : [35, 39],
-                zoomLevel: coords ? 15 : 5,
-              }}
-            />
             {coords && (
-              <MapboxGL.PointAnnotation
-                id="selected-location"
-                coordinate={[coords.lng, coords.lat]}
-              >
-                <View style={s.pin}>
-                  <View style={s.pinDot} />
-                </View>
-              </MapboxGL.PointAnnotation>
+              <Marker coordinate={{ latitude: coords.lat, longitude: coords.lng }} tracksViewChanges={false}>
+                <View style={s.pin}><View style={s.pinDot} /></View>
+              </Marker>
             )}
-          </MapboxGL.MapView>
+          </MapView>
           {locating && (
             <View style={s.mapOverlay}>
               <ActivityIndicator color={C.primary} size="large" />
@@ -230,12 +217,7 @@ export default function AddReportScreen({ route, navigation }: any) {
 
         {/* ── Gönder ── */}
         <View style={s.submitWrap}>
-          <PillBtn
-            label="Çukuru Bildir"
-            onPress={submit}
-            loading={submitting}
-            fullWidth
-          />
+          <PillBtn label="Çukuru Bildir" onPress={submit} loading={submitting} fullWidth />
         </View>
 
         <View style={{ height: S.xl3 }} />
@@ -255,30 +237,21 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
-  pin: { alignItems: 'center', justifyContent: 'center', width: 24, height: 24 },
-  pinDot: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: C.primary, borderWidth: 3, borderColor: '#fff',
-  },
+  pin:    { width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, borderWidth: 3, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  pinDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
 
   row:      { flexDirection: 'row', gap: S.sm, marginBottom: S.sm },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: S.xxs,
-    paddingHorizontal: S.md, paddingVertical: S.xs,
-    borderRadius: R.pill,
+    paddingHorizontal: S.md, paddingVertical: S.xs, borderRadius: R.pill,
   },
   chipText: { fontSize: 13, fontWeight: '600' },
   addrText: { fontSize: 12, color: C.body, marginBottom: S.xs },
 
-  photoBox: {
-    borderRadius: R.lg, overflow: 'hidden', height: 200,
-    backgroundColor: C.canvas, marginBottom: S.sm,
-  },
-  photo: { width: '100%', height: '100%', resizeMode: 'cover' },
-  photoPlaceholder: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', gap: S.sm,
-  },
-  photoHint: { fontSize: 14, color: C.mute },
+  photoBox: { borderRadius: R.lg, overflow: 'hidden', height: 200, backgroundColor: C.canvas, marginBottom: S.sm },
+  photo:    { width: '100%', height: '100%', resizeMode: 'cover' },
+  photoPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: S.sm },
+  photoHint:  { fontSize: 14, color: C.mute },
   removePhoto: { alignSelf: 'flex-end', marginBottom: S.sm },
 
   input: {
@@ -287,5 +260,5 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: C.canvasSofter, marginBottom: S.sm,
   },
   inputSingle: { minHeight: 48, textAlignVertical: 'center' },
-  submitWrap: { marginTop: S.sm },
+  submitWrap:  { marginTop: S.sm },
 });

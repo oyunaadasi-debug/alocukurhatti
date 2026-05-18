@@ -3,7 +3,9 @@ const router = express.Router();
 const { body, query, param, validationResult } = require('express-validator');
 const pool = require('../db/pool');
 const { upload, cloudinary } = require('../middleware/upload');
-const { checkImageSafe } = require('../middleware/moderation');
+const { checkImageSafe, checkVisionSafe } = require('../middleware/moderation');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const { reverseGeocode } = require('../middleware/geocode');
 
 // GET /api/reports — harita için tüm açık raporlar
 router.get('/', [
@@ -95,10 +97,10 @@ router.post('/', upload.single('photo'), [
     return res.status(400).json({ error: 'Fotoğraf zorunludur.' });
   }
 
-  const modCheck = checkImageSafe(req);
-  if (!modCheck.safe) {
+  const mimeCheck = checkImageSafe(req);
+  if (!mimeCheck.safe) {
     await cloudinary.uploader.destroy(req.file.filename);
-    return res.status(422).json({ error: modCheck.reason });
+    return res.status(422).json({ error: mimeCheck.reason });
   }
 
   const errors = validationResult(req);
@@ -107,8 +109,24 @@ router.post('/', upload.single('photo'), [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { lat, lng, description, reporter_name, address, city, district } = req.body;
+  const { lat, lng, description, reporter_name } = req.body;
+  let { address, city, district } = req.body;
   const photoUrl = req.file.path;
+
+  // Kullanıcı adres girmemişse otomatik tersine geocoding
+  if (!address || !city) {
+    const geo = await reverseGeocode(lat, lng);
+    address = address || geo.address;
+    city = city || geo.city;
+    district = district || geo.district;
+  }
+
+  // Google Vision SafeSearch — Cloudinary'ye yüklendikten sonra kontrol
+  const visionCheck = await checkVisionSafe(photoUrl);
+  if (!visionCheck.safe) {
+    await cloudinary.uploader.destroy(req.file.filename);
+    return res.status(422).json({ error: visionCheck.reason });
+  }
   const photoPublicId = req.file.filename;
   const reporterIp = req.ip;
 
@@ -151,6 +169,64 @@ router.post('/:id/metoo', param('id').isInt(), async (req, res) => {
     const { rows } = await pool.query('SELECT me_too_count FROM reports WHERE id = $1', [id]);
     res.json({ me_too_count: rows[0]?.me_too_count ?? 0 });
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
+// POST /api/reports/:id/resolve — çözüldü işaretleme (kayıtlı vatandaş, belediye, admin)
+router.post('/:id/resolve', requireAuth, upload.single('photo'), [
+  param('id').isInt(),
+  body('note').optional().isString().trim().isLength({ max: 500 }),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { id } = req.params;
+  const { note } = req.body;
+  const resolverRole = req.user.role;
+
+  // Vatandaş ve belediye memuru fotoğraf eklemek zorunda
+  if (resolverRole !== 'admin' && !req.file) {
+    return res.status(400).json({ error: 'Çözüm kanıtı olarak fotoğraf zorunludur.' });
+  }
+
+  try {
+    const { rows: reportRows } = await pool.query(
+      'SELECT id, status FROM reports WHERE id = $1 AND moderation_status = $2',
+      [id, 'approved']
+    );
+    if (!reportRows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });
+    if (reportRows[0].status === 'resolved') {
+      return res.status(409).json({ error: 'Bu rapor zaten çözüldü olarak işaretlenmiş.' });
+    }
+
+    let photoUrl = null;
+    if (req.file) {
+      const modCheck = checkImageSafe(req);
+      if (!modCheck.safe) {
+        await cloudinary.uploader.destroy(req.file.filename);
+        return res.status(422).json({ error: modCheck.reason });
+      }
+      photoUrl = req.file.path;
+    }
+
+    await pool.query('BEGIN');
+    await pool.query(
+      `INSERT INTO resolutions (report_id, resolved_by, resolver_role, photo_url, note)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, req.user.id, resolverRole, photoUrl, note || null]
+    );
+    await pool.query(
+      `UPDATE reports SET status = 'resolved', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+    await pool.query('COMMIT');
+
+    res.json({ success: true, message: 'Rapor çözüldü olarak işaretlendi.' });
+  } catch (err) {
+    await pool.query('ROLLBACK').catch(() => {});
+    if (req.file) await cloudinary.uploader.destroy(req.file.filename).catch(() => {});
     console.error(err);
     res.status(500).json({ error: 'Sunucu hatası.' });
   }

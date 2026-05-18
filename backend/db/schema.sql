@@ -71,6 +71,50 @@ CREATE TABLE IF NOT EXISTS report_flags (
   UNIQUE(report_id, reporter_ip)
 );
 
+-- Push notification token'ları
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  platform VARCHAR(10),             -- ios | android
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(token)
+);
+
+-- Bildirim geçmişi
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  report_id INTEGER REFERENCES reports(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,        -- status_changed | me_too | resolved
+  title TEXT,
+  body TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Belediye webhook entegrasyonları
+CREATE TABLE IF NOT EXISTS municipality_webhooks (
+  id SERIAL PRIMARY KEY,
+  city TEXT NOT NULL,
+  endpoint_url TEXT NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(city)
+);
+
+-- Belediye iletim geçmişi
+CREATE TABLE IF NOT EXISTS municipality_log (
+  id SERIAL PRIMARY KEY,
+  report_id INTEGER REFERENCES reports(id) ON DELETE SET NULL,
+  webhook_id INTEGER REFERENCES municipality_webhooks(id) ON DELETE SET NULL,
+  success BOOLEAN NOT NULL,
+  http_status INTEGER,
+  error_message TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- geom otomatik güncellemesi için trigger
 CREATE OR REPLACE FUNCTION update_report_geom()
 RETURNS TRIGGER AS $$
