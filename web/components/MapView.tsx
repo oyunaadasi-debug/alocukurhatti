@@ -538,26 +538,30 @@ export default function MapView() {
               0%, 100% { box-shadow: 0 6px 28px rgba(229,57,53,0.5); }
               50% { box-shadow: 0 8px 48px rgba(229,57,53,0.75), 0 0 0 14px rgba(229,57,53,0.13); }
             }
-            .si-report-btn {
-              animation: sibtn-pulse 2.6s ease-in-out infinite;
-              position: fixed;
-              top: 55%; left: 50%;
-              transform: translate(-50%, -50%);
-              z-index: 9999;
-              background: #E53935; color: #fff;
-              border: none; border-radius: 999px;
-              padding: 20px 60px;
-              font-size: 20px; font-weight: 800; cursor: pointer; white-space: nowrap;
-              display: flex; align-items: center; gap: 12px;
-              letter-spacing: 0.3px;
-            }
-            @media (max-width: 480px) {
-              .si-report-btn { padding: 18px 44px; font-size: 17px; }
-            }
           `}</style>
           <button
             onClick={() => setShowLocationConsent(true)}
-            className="si-report-btn"
+            style={{
+              position: 'fixed',
+              top: '55%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999,
+              animation: 'sibtn-pulse 2.6s ease-in-out infinite',
+              background: '#E53935',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '999px',
+              padding: '20px 60px',
+              fontSize: '20px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              letterSpacing: '0.3px',
+            }}
           >
             📍 Şikayet Bildir
           </button>
