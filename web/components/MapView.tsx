@@ -535,24 +535,24 @@ export default function MapView() {
         <>
           <style>{`
             @keyframes sibtn-pulse {
-              0%, 100% { box-shadow: 0 6px 28px rgba(229,57,53,0.5); transform: translate(-50%, -50%) scale(1); }
-              50% { box-shadow: 0 8px 48px rgba(229,57,53,0.75), 0 0 0 14px rgba(229,57,53,0.13); transform: translate(-50%, -50%) scale(1.05); }
+              0%, 100% { box-shadow: 0 6px 28px rgba(229,57,53,0.5); }
+              50% { box-shadow: 0 8px 48px rgba(229,57,53,0.75), 0 0 0 14px rgba(229,57,53,0.13); }
             }
             .si-report-btn {
               animation: sibtn-pulse 2.6s ease-in-out infinite;
               position: absolute;
-              top: 58%; left: 50%;
+              top: 50%; left: 50%;
               transform: translate(-50%, -50%);
               z-index: 1000;
               background: #E53935; color: #fff;
               border: none; border-radius: 999px;
-              padding: 18px 56px;
-              font-size: 18px; font-weight: 800; cursor: pointer; white-space: nowrap;
+              padding: 20px 60px;
+              font-size: 20px; font-weight: 800; cursor: pointer; white-space: nowrap;
               display: flex; align-items: center; gap: 12px;
               letter-spacing: 0.3px;
             }
             @media (max-width: 480px) {
-              .si-report-btn { padding: 16px 40px; font-size: 16px; }
+              .si-report-btn { padding: 18px 44px; font-size: 17px; }
             }
           `}</style>
           <button
