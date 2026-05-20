@@ -31,7 +31,19 @@ const STATUS_LABEL: Record<string, string> = {
   resolved: 'Çözüldü ✓',
 };
 
-type NominatimResult = { place_id: string; display_name: string; lat: string; lon: string };
+type NominatimResult = {
+  place_id: string; display_name: string; lat: string; lon: string;
+  address?: { city?: string; town?: string; province?: string; state?: string; };
+};
+type DistrictStat = {
+  district: string; open_count: string; resolved_count: string;
+  total_count: string; center_lat: string; center_lng: string;
+};
+type CityStats = {
+  city: string;
+  summary: { open_count: string; resolved_count: string; total_count: string };
+  districts: DistrictStat[];
+};
 
 function FlyController({ target }: { target: [number, number] | null }) {
   const map = useMap();
@@ -322,6 +334,8 @@ export default function MapView() {
   const [showPanel, setShowPanel] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showLocationConsent, setShowLocationConsent] = useState(false);
+  const [cityStats, setCityStats] = useState<CityStats | null>(null);
+  const [cityStatsLoading, setCityStatsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -361,12 +375,13 @@ export default function MapView() {
 
   function handleSearch(val: string) {
     setQuery(val);
+    if (val.trim() === '') { setSuggestions([]); setCityStats(null); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (val.trim().length < 2) { setSuggestions([]); return; }
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&countrycodes=tr&limit=6&addressdetails=0`,
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&countrycodes=tr&limit=6&addressdetails=1`,
           { headers: { 'Accept-Language': 'tr' } }
         );
         const json: NominatimResult[] = await res.json();
@@ -376,16 +391,31 @@ export default function MapView() {
     }, 350);
   }
 
-  function handleSelect(item: NominatimResult) {
+  async function handleSelect(item: NominatimResult) {
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
     setFlyTarget([lat, lng]);
-    setPinPos([lat, lng]);
-    setPinAddress(item.display_name.split(',').slice(0, 3).join(', '));
-    setShowPanel(true);
-    setQuery(item.display_name.split(',').slice(0, 2).join(','));
+    setQuery(item.display_name.split(',').slice(0, 2).join(',').trim());
     setSuggestions([]);
     setShowSuggestions(false);
+    setCityStats(null);
+
+    const cityName = item.address?.city || item.address?.town ||
+      (item.address?.province?.replace(/ İli$/, '').replace(/ Province$/, '')) ||
+      item.display_name.split(',')[0].trim();
+
+    if (cityName) {
+      setCityStatsLoading(true);
+      try {
+        const res = await fetch(`${API}/api/stats/cities/${encodeURIComponent(cityName)}`);
+        const data = await res.json();
+        if (parseInt(data.summary?.total_count) > 0 || data.districts?.length > 0) {
+          setCityStats(data);
+        }
+      } catch { /* no stats */ } finally {
+        setCityStatsLoading(false);
+      }
+    }
   }
 
   function closePanel() {
@@ -410,46 +440,131 @@ export default function MapView() {
         }
       `}</style>
 
-      {/* Sol arama */}
-      <div ref={searchRef} className="map-search" style={{ position: 'absolute', top: 12, left: 12, zIndex: 1000, width: 280 }}>
+      {/* Arama — modern kart */}
+      <div ref={searchRef} className="map-search" style={{ position: 'absolute', top: 12, left: 12, zIndex: 1000, width: 300 }}>
+
+        {/* Input */}
         <div style={{
           display: 'flex', alignItems: 'center', background: '#fff',
-          borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
-          padding: '0 12px', gap: 8,
+          borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+          padding: '0 14px', gap: 10,
         }}>
-          <span style={{ fontSize: 16, color: '#9E9E9E', flexShrink: 0 }}>🔍</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E9E9E" strokeWidth="2.5" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
             type="text" value={query}
             onChange={e => handleSearch(e.target.value)}
             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
             placeholder="Mahalle, ilçe, şehir ara…"
             style={{
-              border: 'none', outline: 'none', fontSize: 13, fontWeight: 500,
-              color: '#212121', flex: 1, padding: '10px 0', background: 'transparent',
+              border: 'none', outline: 'none', fontSize: 14, fontWeight: 500,
+              color: '#212121', flex: 1, padding: '13px 0', background: 'transparent',
             }}
           />
           {query && (
             <button
-              onClick={() => { setQuery(''); setSuggestions([]); closePanel(); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9E9E9E', fontSize: 16, padding: 0, lineHeight: 1 }}
+              onClick={() => { setQuery(''); setSuggestions([]); setCityStats(null); }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#BDBDBD', fontSize: 20, padding: 0, lineHeight: 1, flexShrink: 0 }}
             >×</button>
           )}
         </div>
+
+        {/* Öneri listesi */}
         {showSuggestions && suggestions.length > 0 && (
-          <div style={{ marginTop: 4, background: '#fff', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.16)', overflow: 'hidden' }}>
-            {suggestions.map(item => (
+          <div style={{ marginTop: 6, background: '#fff', borderRadius: 14, boxShadow: '0 6px 24px rgba(0,0,0,0.14)', overflow: 'hidden' }}>
+            {suggestions.map((item, i) => (
               <button key={item.place_id} onClick={() => handleSelect(item)}
                 style={{
                   width: '100%', border: 'none', background: 'none', cursor: 'pointer',
-                  textAlign: 'left', padding: '9px 14px', fontSize: 12, color: '#212121',
-                  borderBottom: '1px solid #F5F5F5', lineHeight: 1.4, display: 'block',
+                  textAlign: 'left', padding: '11px 16px', color: '#212121',
+                  borderBottom: i < suggestions.length - 1 ? '1px solid #F5F5F5' : 'none',
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#FFF0F0')}
+                onMouseEnter={e => (e.currentTarget.style.background = '#FFF5F5')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'none')}
               >
-                📍 {item.display_name.split(',').slice(0, 3).join(', ')}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#E53935" style={{ flexShrink: 0, marginTop: 2 }}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
+                    {item.display_name.split(',')[0].trim()}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9E9E9E', marginTop: 2 }}>
+                    {item.display_name.split(',').slice(1, 3).join(',').trim()}
+                  </div>
+                </div>
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Şehir stats kartı */}
+        {(cityStats || cityStatsLoading) && (
+          <div style={{
+            marginTop: 6, background: '#fff', borderRadius: 14,
+            boxShadow: '0 6px 24px rgba(0,0,0,0.14)',
+            maxHeight: 300, overflowY: 'auto',
+          }}>
+            {cityStatsLoading ? (
+              <div style={{ padding: '14px 16px', textAlign: 'center', color: '#9E9E9E', fontSize: 13 }}>
+                Yükleniyor…
+              </div>
+            ) : cityStats && (
+              <>
+                {/* Özet başlık */}
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #F0F0F0' }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#212121', marginBottom: 6 }}>
+                    📍 {cityStats.city}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <span style={{ background: '#FFF0F0', color: '#E53935', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                      {cityStats.summary.open_count} açık
+                    </span>
+                    <span style={{ background: '#E8F5E9', color: '#2E7D32', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+                      {cityStats.summary.resolved_count} çözüldü
+                    </span>
+                    <span style={{ background: '#F5F5F5', color: '#757575', borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+                      {cityStats.summary.total_count} toplam
+                    </span>
+                  </div>
+                </div>
+                {/* İlçeler */}
+                {cityStats.districts.length === 0 && (
+                  <div style={{ padding: '12px 16px', fontSize: 12, color: '#9E9E9E' }}>İlçe verisi yok.</div>
+                )}
+                {cityStats.districts.map((d, i) => (
+                  <button key={d.district}
+                    onClick={() => {
+                      if (d.center_lat && d.center_lng) {
+                        setFlyTarget([parseFloat(d.center_lat), parseFloat(d.center_lng)]);
+                      }
+                    }}
+                    style={{
+                      width: '100%', border: 'none', cursor: 'pointer',
+                      background: 'none', textAlign: 'left',
+                      padding: '9px 16px', display: 'flex',
+                      alignItems: 'center', justifyContent: 'space-between',
+                      borderBottom: i < cityStats.districts.length - 1 ? '1px solid #FAFAFA' : 'none',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#FFF5F5')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#212121' }}>{d.district}</span>
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                      {parseInt(d.open_count) > 0 && (
+                        <span style={{ background: '#FFF0F0', color: '#E53935', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
+                          {d.open_count} açık
+                        </span>
+                      )}
+                      {parseInt(d.resolved_count) > 0 && (
+                        <span style={{ background: '#E8F5E9', color: '#2E7D32', borderRadius: 6, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>
+                          {d.resolved_count} ✓
+                        </span>
+                      )}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#BDBDBD" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
