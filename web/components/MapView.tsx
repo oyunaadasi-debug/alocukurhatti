@@ -540,10 +540,10 @@ export default function MapView() {
             }
             .si-report-btn {
               animation: sibtn-pulse 2.6s ease-in-out infinite;
-              position: absolute;
-              top: 50%; left: 50%;
+              position: fixed;
+              top: 55%; left: 50%;
               transform: translate(-50%, -50%);
-              z-index: 1000;
+              z-index: 9999;
               background: #E53935; color: #fff;
               border: none; border-radius: 999px;
               padding: 20px 60px;
