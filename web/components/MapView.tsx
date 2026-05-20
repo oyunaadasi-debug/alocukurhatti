@@ -539,32 +539,38 @@ export default function MapView() {
               50% { box-shadow: 0 8px 48px rgba(229,57,53,0.75), 0 0 0 14px rgba(229,57,53,0.13); }
             }
           `}</style>
-          <button
-            onClick={() => setShowLocationConsent(true)}
-            style={{
-              position: 'fixed',
-              top: '55%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 9999,
-              animation: 'sibtn-pulse 2.6s ease-in-out infinite',
-              background: '#E53935',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '999px',
-              padding: '20px 60px',
-              fontSize: '20px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              letterSpacing: '0.3px',
-            }}
-          >
-            📍 Şikayet Bildir
-          </button>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}>
+            <button
+              onClick={() => setShowLocationConsent(true)}
+              style={{
+                pointerEvents: 'auto',
+                animation: 'sibtn-pulse 2.6s ease-in-out infinite',
+                background: '#E53935',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '999px',
+                padding: '18px 48px',
+                fontSize: '18px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                letterSpacing: '0.3px',
+              }}
+            >
+              📍 Şikayet Bildir
+            </button>
+          </div>
         </>
       )}
 
@@ -579,7 +585,7 @@ export default function MapView() {
       )}
 
       <MapContainer
-        center={[39.0, 35.0]} zoom={6} minZoom={5} maxZoom={18}
+        center={[39.0, 35.0]} zoom={7} minZoom={6} maxZoom={18}
         maxBounds={TURKEY_BOUNDS} maxBoundsViscosity={1.0}
         style={{ height: '100%', width: '100%' }}
       >
