@@ -9,7 +9,18 @@ import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
 import { StatusBadge, MetaRow, SectionTitle, Divider } from '../components/ui';
 import { API_URL } from '../config';
-import { belediyeFor, buildComplaintText, issueLabel, CIMER_URL, ALO_153 } from '../data/belediyeler';
+import { belediyeFor, buildComplaintText, issueLabel, issueIcon, CIMER_URL, ALO_153 } from '../data/belediyeler';
+
+// İki tarih arası süreyi Türkçe metne çevir (çözüm süresi için)
+function durationText(fromIso: string, toIso: string): string {
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  if (!isFinite(ms) || ms < 0) return '';
+  const days  = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  if (days >= 1)  return `${days} gün${hours ? ` ${hours} saat` : ''}`;
+  if (hours >= 1) return `${hours} saat`;
+  return `${Math.max(1, Math.floor(ms / 60000))} dakika`;
+}
 
 export default function ReportDetailScreen({ route }: any) {
   const { reportId } = route.params;
@@ -74,6 +85,10 @@ export default function ReportDetailScreen({ route }: any) {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 
+  // Çözüldüyse: bildirimden çözüme kadar geçen süre
+  const resolvedAt = report.status === 'resolved' ? report.resolutions?.[0]?.created_at : null;
+  const solveDuration = resolvedAt ? durationText(report.created_at, resolvedAt) : '';
+
   return (
     <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
       {/* Fotoğraf */}
@@ -87,9 +102,19 @@ export default function ReportDetailScreen({ route }: any) {
       <View style={s.body}>
         {/* Sorun türü */}
         <View style={s.typeChip}>
-          <Ionicons name="warning-outline" size={14} color={C.attention} />
+          <Ionicons name={issueIcon(report.issue_type) as any} size={14} color={C.attention} />
           <Text style={s.typeChipText}>{issueLabel(report.issue_type)}</Text>
         </View>
+
+        {/* Çözüm süresi — geçmişe dönük: ne kadar sürede yapıldı */}
+        {solveDuration ? (
+          <View style={s.solvedBanner}>
+            <Ionicons name="checkmark-circle" size={20} color={C.success} />
+            <Text style={s.solvedText}>
+              <Text style={s.solvedStrong}>{solveDuration}</Text> içinde çözüldü
+            </Text>
+          </View>
+        ) : null}
 
         {/* Konum */}
         <MetaRow
@@ -200,7 +225,12 @@ export default function ReportDetailScreen({ route }: any) {
                 {res.photo_url ? (
                   <Image source={{ uri: res.photo_url }} style={s.resPhoto} resizeMode="cover" />
                 ) : null}
-                <Text style={s.resDate}>{new Date(res.created_at).toLocaleDateString('tr-TR')}</Text>
+                <Text style={s.resDate}>
+                  {new Date(res.created_at).toLocaleDateString('tr-TR')}
+                  {durationText(report.created_at, res.created_at)
+                    ? `  ·  bildirimden ${durationText(report.created_at, res.created_at)} sonra`
+                    : ''}
+                </Text>
               </View>
             ))}
           </>
@@ -229,6 +259,15 @@ const s = StyleSheet.create({
     paddingHorizontal: S.md, paddingVertical: 5, borderRadius: R.pill,
   },
   typeChipText: { fontSize: 12.5, fontWeight: '700', color: C.ink },
+
+  // Çözüm süresi banner'ı
+  solvedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+    backgroundColor: '#E7F5EE', borderRadius: R.lg,
+    paddingVertical: S.md, paddingHorizontal: S.lg,
+  },
+  solvedText:   { fontSize: 14, color: C.body },
+  solvedStrong: { fontWeight: '800', color: C.success },
 
   // Belediyeye İlet — double-bezel kart
   iletShell: {

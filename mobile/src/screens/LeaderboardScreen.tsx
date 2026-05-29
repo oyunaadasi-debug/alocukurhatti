@@ -17,7 +17,12 @@ type District = {
   district: string; open_count: string; resolved_count: string;
   total_count: string; total_metoo: string; center_lat: string; center_lng: string;
 };
+type Reporter = {
+  id: number; display_name: string; report_count: string;
+  total_metoo: string; resolved_count: string;
+};
 
+type Tab = 'cities' | 'reporters';
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 function resolveRate(r: { resolved_count: string; total_count: string }) {
@@ -26,19 +31,29 @@ function resolveRate(r: { resolved_count: string; total_count: string }) {
 }
 
 export default function LeaderboardScreen({ navigation }: any) {
+  const [tab, setTab]                 = useState<Tab>('cities');
   const [cities, setCities]           = useState<City[]>([]);
+  const [reporters, setReporters]     = useState<Reporter[]>([]);
   const [loading, setLoading]         = useState(true);
   const [refreshing, setRefreshing]   = useState(false);
   const [expandedCity, setExpanded]   = useState<string | null>(null);
   const [districts, setDistricts]     = useState<District[]>([]);
   const [drillLoad, setDrillLoad]     = useState(false);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [tab]);
 
   async function load() {
+    setLoading(true);
     try {
-      const { data } = await axios.get(`${API_URL}/stats/cities`);
-      setCities(data.cities);
+      if (tab === 'cities') {
+        const { data } = await axios.get(`${API_URL}/stats/cities`);
+        setCities(data.cities);
+      } else {
+        const { data } = await axios.get(`${API_URL}/stats/reporters`);
+        setReporters(data.reporters);
+      }
+    } catch {
+      // sessizce geç — boş durum gösterilir
     } finally {
       setLoading(false); setRefreshing(false);
     }
@@ -130,32 +145,96 @@ export default function LeaderboardScreen({ navigation }: any) {
     );
   };
 
-  if (loading) return (
-    <View style={s.center}><ActivityIndicator size="large" color={C.primary} /></View>
-  );
+  const renderReporter = ({ item, index }: { item: Reporter; index: number }) => {
+    const reports = parseInt(item.report_count);
+    return (
+      <View style={[s.cityCard, elevation(2)]}>
+        <View style={s.cityRow}>
+          <View style={s.rankBox}>
+            <Text style={MEDALS[index] ? s.medal : s.rank}>{MEDALS[index] ?? index + 1}</Text>
+          </View>
+
+          <View style={s.repAvatar}>
+            <Ionicons name="person" size={18} color={C.secondary} />
+          </View>
+
+          <View style={s.cityMid}>
+            <Text style={s.cityName} numberOfLines={1}>{item.display_name}</Text>
+            <Text style={s.cityMeta}>
+              {item.resolved_count} çözüldü · {item.total_metoo} görmüş
+            </Text>
+          </View>
+
+          <View style={s.openBox}>
+            <Text style={s.openNum}>{reports}</Text>
+            <Text style={s.openLbl}>rapor</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>🏆 Şikayet Lider Tablosu</Text>
-        <Text style={s.headerSub}>En fazla açık raporu olan iller</Text>
+        <Text style={s.headerTitle}>🏆 Lider Tablosu</Text>
+        <Text style={s.headerSub}>
+          {tab === 'cities' ? 'En fazla açık raporu olan iller' : 'En çok rapor eden duyarlı vatandaşlar'}
+        </Text>
+
+        {/* Sekme seçici */}
+        <View style={s.tabBar}>
+          <TouchableOpacity
+            style={[s.tab, tab === 'cities' && s.tabActive]}
+            onPress={() => setTab('cities')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.tabText, tab === 'cities' && s.tabTextActive]}>İller</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.tab, tab === 'reporters' && s.tabActive]}
+            onPress={() => setTab('reporters')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.tabText, tab === 'reporters' && s.tabTextActive]}>Duyarlı Vatandaşlar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <FlatList
-        data={cities}
-        keyExtractor={i => i.city}
-        renderItem={renderCity}
-        contentContainerStyle={{ padding: S.md, gap: S.sm, paddingBottom: S.xl3 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(); }}
-            colors={[C.primary]}
-          />
-        }
-        ListEmptyComponent={<EmptyState text="Henüz rapor yok." />}
-      />
+      {loading ? (
+        <View style={s.center}><ActivityIndicator size="large" color={C.primary} /></View>
+      ) : tab === 'cities' ? (
+        <FlatList
+          data={cities}
+          keyExtractor={i => i.city}
+          renderItem={renderCity}
+          contentContainerStyle={{ padding: S.md, gap: S.sm, paddingBottom: S.xl3 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); load(); }}
+              colors={[C.primary]}
+            />
+          }
+          ListEmptyComponent={<EmptyState text="Henüz rapor yok." />}
+        />
+      ) : (
+        <FlatList
+          data={reporters}
+          keyExtractor={i => String(i.id)}
+          renderItem={renderReporter}
+          contentContainerStyle={{ padding: S.md, gap: S.sm, paddingBottom: S.xl3 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); load(); }}
+              colors={[C.primary]}
+            />
+          }
+          ListEmptyComponent={<EmptyState text="Henüz kayıtlı vatandaş raporu yok. Hesap açıp rapor verenler burada sıralanır." />}
+        />
+      )}
     </View>
   );
 }
@@ -170,6 +249,23 @@ const s = StyleSheet.create({
   },
   headerTitle: { color: C.onDark, fontSize: 20, fontWeight: '800' },
   headerSub:   { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
+
+  // Sekme seçici (header içinde, yarı saydam kapsül)
+  tabBar: {
+    flexDirection: 'row', gap: S.xxs, marginTop: S.md,
+    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.pill, padding: 3,
+  },
+  tab: {
+    flex: 1, paddingVertical: S.sm, borderRadius: R.pill, alignItems: 'center',
+  },
+  tabActive: { backgroundColor: C.canvas },
+  tabText:       { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
+  tabTextActive: { color: C.primary },
+
+  repAvatar: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: C.secondaryContainer,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   cityCard: {
     backgroundColor: C.canvas, borderRadius: R.lg, overflow: 'hidden',

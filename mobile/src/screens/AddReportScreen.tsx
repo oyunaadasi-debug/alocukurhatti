@@ -12,6 +12,7 @@ import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
 import { PillBtn, Divider, SectionTitle } from '../components/ui';
 import { API_URL } from '../config';
+import { ISSUE_TYPES, issueLabel } from '../data/belediyeler';
 
 export default function AddReportScreen({ route, navigation }: any) {
   const passedLoc = route?.params?.userLocation;
@@ -23,6 +24,7 @@ export default function AddReportScreen({ route, navigation }: any) {
   const [city, setCity]         = useState('');
   const [district, setDistrict] = useState('');
   const [photo, setPhoto]       = useState<string | null>(null);
+  const [issueType, setIssueType] = useState('cukur');
   const [description, setDesc]  = useState('');
   const [name, setName]         = useState('');
   const [manualMode, setManual] = useState(false);
@@ -90,7 +92,7 @@ export default function AddReportScreen({ route, navigation }: any) {
   }
 
   async function submit() {
-    if (!photo)  return Alert.alert('Fotoğraf Gerekli', 'Lütfen çukurun fotoğrafını ekleyin.');
+    if (!photo)  return Alert.alert('Fotoğraf Gerekli', 'Lütfen sorunun fotoğrafını ekleyin.');
     if (!coords) return Alert.alert('Konum Gerekli', 'GPS konumunuz alınıyor veya haritadan seçin.');
 
     setSubmit(true);
@@ -99,6 +101,7 @@ export default function AddReportScreen({ route, navigation }: any) {
       fd.append('lat', String(coords.lat));
       fd.append('lng', String(coords.lng));
       fd.append('photo', { uri: photo, type: 'image/jpeg', name: 'report.jpg' } as any);
+      fd.append('issue_type', issueType);
       if (description) fd.append('description', description);
       if (name)        fd.append('reporter_name', name);
       if (address)     fd.append('address', address);
@@ -126,8 +129,37 @@ export default function AddReportScreen({ route, navigation }: any) {
     : { latitude: 39.0, longitude: 35.0, latitudeDelta: 8, longitudeDelta: 8 };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* ── Sorun Türü ── */}
+        <SectionTitle text="Sorun Türü *" />
+        <View style={s.typeGrid}>
+          {ISSUE_TYPES.map(t => {
+            const active = issueType === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={[s.typeCard, active && s.typeCardActive]}
+                onPress={() => setIssueType(t.key)}
+                activeOpacity={0.8}
+              >
+                <View style={[s.typeIcon, active && s.typeIconActive]}>
+                  <Ionicons name={t.icon as any} size={18} color={active ? C.onPrimary : C.body} />
+                </View>
+                <Text style={[s.typeLabel, active && s.typeLabelActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Divider mx={0} />
 
         {/* ── Konum ── */}
         <SectionTitle text={locating ? 'Konum tespit ediliyor…' : 'Konum'} />
@@ -180,7 +212,7 @@ export default function AddReportScreen({ route, navigation }: any) {
           ) : (
             <View style={s.photoPlaceholder}>
               <Ionicons name="camera" size={40} color={C.dim} />
-              <Text style={s.photoHint}>Çukurun fotoğrafını ekleyin</Text>
+              <Text style={s.photoHint}>Sorunun fotoğrafını ekleyin</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -196,7 +228,7 @@ export default function AddReportScreen({ route, navigation }: any) {
         <SectionTitle text="Açıklama (isteğe bağlı)" />
         <TextInput
           style={s.input}
-          placeholder="Çukurun büyüklüğü, tehlikesi vb."
+          placeholder="Sorunun büyüklüğü, tehlikesi vb."
           placeholderTextColor={C.mute}
           value={description}
           onChangeText={setDesc}
@@ -217,7 +249,7 @@ export default function AddReportScreen({ route, navigation }: any) {
 
         {/* ── Gönder ── */}
         <View style={s.submitWrap}>
-          <PillBtn label="Çukuru Bildir" onPress={submit} loading={submitting} fullWidth />
+          <PillBtn label={`${issueLabel(issueType)} Bildir`} onPress={submit} loading={submitting} fullWidth />
         </View>
 
         <View style={{ height: S.xl3 }} />
@@ -229,6 +261,22 @@ export default function AddReportScreen({ route, navigation }: any) {
 const s = StyleSheet.create({
   scroll:   { flex: 1, backgroundColor: C.canvasSoft },
   content:  { padding: S.lg, gap: S.md },
+
+  // Sorun türü seçici — button-in-button pill kartlar
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginBottom: S.sm },
+  typeCard: {
+    flexDirection: 'row', alignItems: 'center', gap: S.xs,
+    backgroundColor: C.canvas, borderWidth: 1.5, borderColor: C.canvasSofter,
+    borderRadius: R.pill, paddingVertical: 5, paddingLeft: 5, paddingRight: S.md,
+  },
+  typeCardActive: { borderColor: C.primary, backgroundColor: C.primaryContainer },
+  typeIcon: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: C.canvasSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  typeIconActive: { backgroundColor: C.primary },
+  typeLabel:       { fontSize: 13, fontWeight: '600', color: C.body },
+  typeLabelActive: { color: C.ink, fontWeight: '700' },
   mapBox:   { borderRadius: R.lg, overflow: 'hidden', height: 210, marginBottom: S.sm },
   map:      { flex: 1 },
   mapOverlay: {

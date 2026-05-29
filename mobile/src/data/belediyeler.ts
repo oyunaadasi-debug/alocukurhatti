@@ -10,16 +10,25 @@
 export const CIMER_URL = 'https://www.cimer.gov.tr';
 export const ALO_153 = '153';
 
-export const ISSUE_LABELS: Record<string, string> = {
-  cukur:          'Çukur',
-  bozuk_yol:      'Bozuk Yol',
-  kaldirim:       'Kaldırım Hasarı',
-  tumsek:         'Tümsek',
-  su_birikintisi: 'Su Birikintisi',
-};
+// Sorun türleri — sıra, etiket ve Ionicons ikon adı. AddReport seçici + ReportDetail chip ortak kullanır.
+export const ISSUE_TYPES: { key: string; label: string; icon: string }[] = [
+  { key: 'cukur',          label: 'Çukur',          icon: 'alert-circle' },
+  { key: 'bozuk_yol',      label: 'Bozuk Yol',      icon: 'trail-sign' },
+  { key: 'kaldirim',       label: 'Kaldırım Hasarı', icon: 'walk' },
+  { key: 'tumsek',         label: 'Tümsek',         icon: 'triangle' },
+  { key: 'su_birikintisi', label: 'Su Birikintisi', icon: 'water' },
+];
+
+export const ISSUE_LABELS: Record<string, string> = Object.fromEntries(
+  ISSUE_TYPES.map(t => [t.key, t.label])
+);
 
 export function issueLabel(t?: string): string {
   return (t && ISSUE_LABELS[t]) || 'Yol Hasarı';
+}
+
+export function issueIcon(t?: string): string {
+  return ISSUE_TYPES.find(x => x.key === t)?.icon || 'warning';
 }
 
 export type BelediyeKanal = {
