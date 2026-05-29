@@ -1,12 +1,52 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Text as RNText, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { C } from './src/theme';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+
+// fontWeight → Plus Jakarta Sans ailesi (Android'de fontWeight özel fontu seçmez,
+// bu yüzden ağırlığı doğru font dosyasına eşliyoruz; iOS'ta da tutarlı kalır).
+function weightToFamily(weight?: string | number): string {
+  switch (String(weight ?? '400')) {
+    case '500':              return 'PlusJakartaSans_500Medium';
+    case '600':              return 'PlusJakartaSans_600SemiBold';
+    case '700': case 'bold': return 'PlusJakartaSans_700Bold';
+    case '800': case '900':  return 'PlusJakartaSans_800ExtraBold';
+    default:                 return 'PlusJakartaSans_400Regular';
+  }
+}
+
+// Tüm <Text> bileşenlerine markanın fontunu enjekte et (her ekranı tek tek
+// değiştirmeden global tipografi). Bir kez, modül yüklenirken uygulanır.
+let fontsPatched = false;
+function patchTextFont() {
+  if (fontsPatched) return;
+  fontsPatched = true;
+  const origRender = (RNText as any).render;
+  (RNText as any).render = function (...args: any[]) {
+    const el = origRender.apply(this, args);
+    const flat = StyleSheet.flatten(el.props.style) || {};
+    return React.cloneElement(el, {
+      style: [{ fontFamily: weightToFamily(flat.fontWeight) }, el.props.style],
+    });
+  };
+}
+patchTextFont();
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import MapScreen          from './src/screens/MapScreen';
 import AddReportScreen    from './src/screens/AddReportScreen';
@@ -125,6 +165,20 @@ function RootNavigator() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <AuthProvider>
       <NavigationContainer>
