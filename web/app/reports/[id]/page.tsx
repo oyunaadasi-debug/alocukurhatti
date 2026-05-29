@@ -1,7 +1,22 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
+import ReportActions from '@/components/ReportActions';
 
 const API = process.env.NEXT_PUBLIC_API_URL;
+
+const ISSUE_TYPE_MAP: Record<string, { emoji: string; label: string }> = {
+  cukur:         { emoji: '🕳️', label: 'Çukur' },
+  bozuk_yol:     { emoji: '🛣️', label: 'Bozuk Yol' },
+  kaldirim:      { emoji: '🚶', label: 'Kaldırım Hasarı' },
+  tumsek:        { emoji: '⛰️', label: 'Tümsek' },
+  su_birikintisi:{ emoji: '💧', label: 'Su Birikintisi' },
+};
+
+const UPDATE_TYPE_MAP: Record<string, { emoji: string; label: string; color: string; bg: string }> = {
+  complaint_joined: { emoji: '🙋', label: 'Ben de Şikayetçiyim', color: '#F57F17', bg: '#FFF8E1' },
+  still_unresolved: { emoji: '⏳', label: 'Hala Devam Ediyor',   color: '#C62828', bg: '#FFEBEE' },
+  resolution_proof: { emoji: '✅', label: 'Çözüldü — Vatandaş Kanıtı', color: '#2E7D32', bg: '#F1F8E9' },
+};
 
 const STATUS_LABEL: Record<string, string> = {
   open: 'Açık',
@@ -23,11 +38,14 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const res = await fetch(`${API}/api/reports/${params.id}`, { next: { revalidate: 60 } });
   if (!res.ok) return { title: 'Rapor Bulunamadı' };
   const report = await res.json();
+  const iInfo = ISSUE_TYPE_MAP[report.issue_type] || ISSUE_TYPE_MAP.cukur;
   return {
-    title: `Çukur Raporu — ${report.address || report.city || 'Türkiye'} | Alo Çukur Hattı`,
-    description: report.description || `${report.city || ''} ${report.district || ''} bölgesinde yol hasarı raporu.`,
+    title: `${iInfo.emoji} ${iInfo.label} Raporu — ${report.address || report.city || 'Türkiye'} | Alo Çukur Hattı`,
+    description: report.description || `${report.city || ''} ${report.district || ''} bölgesinde ${iInfo.label.toLowerCase()} raporu.`,
   };
 }
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://web-ten-kappa-37.vercel.app';
 
 export default async function ReportPage({ params }: { params: { id: string } }) {
   const res = await fetch(`${API}/api/reports/${params.id}`, { next: { revalidate: 60 } });
@@ -36,7 +54,11 @@ export default async function ReportPage({ params }: { params: { id: string } })
 
   const statusColor = STATUS_COLOR[report.status] || '#9E9E9E';
   const statusLabel = STATUS_LABEL[report.status] || report.status;
+  const issueInfo = ISSUE_TYPE_MAP[report.issue_type] || ISSUE_TYPE_MAP.cukur;
   const date = new Date(report.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const pageUrl = `${SITE_URL}/reports/${params.id}`;
+  const shareText = `Alo Çukur Hattı: ${report.address || report.city || 'Yol hasarı'} bölgesinde ${issueInfo.label.toLowerCase()} bildirimi. ${pageUrl}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
   return (
     <main style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px' }}>
@@ -48,6 +70,9 @@ export default async function ReportPage({ params }: { params: { id: string } })
           <span style={{ position: 'absolute', top: 12, left: 12, background: statusColor, color: '#fff', borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
             {statusLabel}
           </span>
+          <span style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
+            {issueInfo.emoji} {issueInfo.label}
+          </span>
         </div>
 
         <div style={{ padding: 24 }}>
@@ -58,10 +83,18 @@ export default async function ReportPage({ params }: { params: { id: string } })
           )}
           {report.description && <p style={{ fontSize: 15, lineHeight: 1.6, color: '#424242', marginBottom: 20 }}>{report.description}</p>}
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ background: '#1565C0', color: '#fff', borderRadius: 999, padding: '8px 20px', fontSize: 14, fontWeight: 600 }}>
-              👁 {report.me_too_count} kişi de gördü
+              👍 {report.me_too_count} kişi de gördü
             </span>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ background: '#25D366', color: '#fff', borderRadius: 999, padding: '8px 20px', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+            >
+              WhatsApp'ta Paylaş
+            </a>
             <span style={{ fontSize: 13, color: '#9E9E9E' }}>
               {report.reporter_name ? `Bildiren: ${report.reporter_name}` : 'Anonim vatandaş'}
             </span>
@@ -82,6 +115,37 @@ export default async function ReportPage({ params }: { params: { id: string } })
               ))}
             </div>
           )}
+
+          {/* Vatandaş güncellemeleri zaman çizelgesi */}
+          {report.updates?.length > 0 && (
+            <div style={{ marginTop: 28 }}>
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#212121', marginBottom: 12 }}>Vatandaş Güncellemeleri</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {report.updates.map((u: any) => {
+                  const tc = UPDATE_TYPE_MAP[u.update_type] || { emoji: '📝', label: u.update_type, color: '#9E9E9E', bg: '#F5F5F5' };
+                  const uDate = new Date(u.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+                  return (
+                    <div key={u.id} style={{ border: `1.5px solid ${tc.color}`, borderRadius: 12, padding: 14, background: tc.bg }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: u.photo_url || u.note ? 10 : 0 }}>
+                        <span style={{ fontSize: 18 }}>{tc.emoji}</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: tc.color }}>{tc.label}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9E9E9E' }}>{uDate}</span>
+                      </div>
+                      {u.photo_url && (
+                        <div style={{ position: 'relative', width: '100%', height: 160, borderRadius: 8, overflow: 'hidden', marginBottom: 8 }}>
+                          <Image src={u.photo_url} alt="Güncelleme fotoğrafı" fill style={{ objectFit: 'cover' }} />
+                        </div>
+                      )}
+                      {u.note && <p style={{ fontSize: 13, color: '#424242', margin: 0 }}>{u.note}</p>}
+                      {u.reporter_name && <p style={{ fontSize: 11, color: '#9E9E9E', marginTop: 4, marginBottom: 0 }}>— {u.reporter_name}</p>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <ReportActions reportId={report.id} />
         </div>
       </div>
     </main>

@@ -1,8 +1,9 @@
 import Header from '@/components/Header';
 import StatsBar from '@/components/StatsBar';
 import Leaderboard from '@/components/Leaderboard';
+import ReportersTable from '@/components/ReportersTable';
 
-export const metadata = { title: 'Şehir Sıralaması — Alo Çukur Hattı' };
+export const metadata = { title: 'Sıralama — Alo Çukur Hattı' };
 
 export default function SiralamePage() {
   return (
@@ -13,6 +14,10 @@ export default function SiralamePage() {
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, letterSpacing: '-0.02em' }}>Şehir Sıralaması</h1>
         <p style={{ fontSize: 14, color: '#616161', marginBottom: 24 }}>En fazla açık raporu olan şehirler.</p>
         <Leaderboard />
+
+        <h2 style={{ fontSize: 20, fontWeight: 800, marginTop: 48, marginBottom: 4, letterSpacing: '-0.02em' }}>En Duyarlı Vatandaşlar</h2>
+        <p style={{ fontSize: 14, color: '#616161', marginBottom: 24 }}>En fazla çukur bildiren kayıtlı kullanıcılar.</p>
+        <ReportersTable />
       </main>
     </>
   );

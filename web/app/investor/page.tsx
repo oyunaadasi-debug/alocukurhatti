@@ -267,12 +267,20 @@ export default function InvestorPage() {
         <h2 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 16, marginTop: 12 }}>
           Sürdürülebilir ve ücretsiz.
         </h2>
+        <div style={{ background: SOFT, borderRadius: 12, padding: '16px 20px', marginTop: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <span style={{ fontSize: 18, marginTop: 1 }}>ℹ️</span>
+          <div style={{ fontSize: 14, color: BODY, lineHeight: 1.65 }}>
+            <strong style={{ color: INK }}>Platform tamamen ücretsizdir.</strong> Kullanıcıdan, belediyeden veya vatandaştan herhangi bir ücret talep edilmez.
+            Temel yatırım ihtiyaçları <strong style={{ color: INK }}>sunucu giderleri</strong> ve <strong style={{ color: INK }}>yazılım geliştirme maliyetlerinden</strong> ibarettir.
+            Gelir, yalnızca uygulama içi reklam üzerinden sağlanır; aşağıdaki modeller orta ve uzun vadeli yol haritasını göstermektedir.
+          </div>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginTop: 36 }}>
           {[
-            { icon: '📱', title: 'Google AdMob', text: 'Uygulama içi reklamlar — kullanıcıya ücretsiz, platform gelir üretir', badge: 'Kısa vadeli' },
-            { icon: '🏢', title: 'Belediye Lisansı', text: 'Belediye paneli + API erişimi aylık SaaS aboneliği — B2G gelir modeli', badge: 'Orta vadeli' },
+            { icon: '📱', title: 'Google AdMob', text: 'Uygulama içi reklamlar — kullanıcıya ücretsiz, platform gelir üretir', badge: 'Mevcut' },
+            { icon: '🏢', title: 'Belediye Paneli', text: 'Belediye paneli + API erişimi — belediye ile işbirliği anlaşması yapılınca aktif', badge: 'Orta vadeli' },
             { icon: '📊', title: 'Veri & Analitik', text: 'Anonimleştirilmiş yol hasar verisi — sigorta, inşaat, akademi sektörü', badge: 'Uzun vadeli' },
-            { icon: '🤝', title: 'Kurumsal Sponsor', text: 'KSS bütçesiyle logo konumu, özel rapor kategorisi, medya görünürlüğü', badge: 'Mevcut' },
+            { icon: '🤝', title: 'Kurumsal Sponsor', text: 'KSS bütçesiyle kurumsal görünürlük ve özel rapor kategorisi', badge: 'Uzun vadeli' },
           ].map(r => (
             <div key={r.title} style={{ border: `1px solid #EEEEEE`, borderRadius: 16, padding: 24 }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>{r.icon}</div>
@@ -335,10 +343,24 @@ export default function InvestorPage() {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, marginTop: 36 }}>
           <div style={{ background: SOFT, borderRadius: 16, padding: 28 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 9999, background: RED, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, marginBottom: 16 }}>TY</div>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Talha Yılmaz</div>
-            <div style={{ fontSize: 14, color: RED, fontWeight: 600, marginBottom: 12 }}>Kurucu & Ürün Sahibi</div>
-            <div style={{ fontSize: 14, color: BODY, lineHeight: 1.65 }}>Proje konsepti, ürün vizyonu ve kullanıcı deneyimi tasarımını yürütüyor. Sivil teknoloji ve kentsel hesap verebilirlik odaklı.</div>
+            {/* Fotoğraf placeholder — gerçek fotoğraf eklenince img etiketi ile değiştirilecek */}
+            <div style={{ width: 80, height: 80, borderRadius: 9999, background: RED, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 24, marginBottom: 16 }}>TY</div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 2 }}>Talha Yılmaz</div>
+            <div style={{ fontSize: 13, color: MUTE, marginBottom: 8 }}>Adana</div>
+            <div style={{ fontSize: 14, color: RED, fontWeight: 600, marginBottom: 16 }}>Kurucu & Proje Sahibi</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {[
+                { label: 'Eğitim', value: 'Siyaset Bilimi ve Kamu Yönetimi — Lisans · Yüksek Lisans · Doktora (Tez Aşaması)' },
+                { label: 'Sektör', value: 'Gayrimenkul' },
+              ].map(r => (
+                <div key={r.label} style={{ fontSize: 13, color: BODY }}>
+                  <span style={{ fontWeight: 600, color: INK }}>{r.label}:</span> {r.value}
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 14, color: BODY, lineHeight: 1.65 }}>
+              Belediyelerle doğrudan işbirliği kurarak şeffaf belediyecilik anlayışını dijitalleştirmeyi hedefliyor. Proje, Yeni Kamu İşletmeciliği (YKİ) ilkeleri ve Dünya Bankası&apos;nın yönetişim çerçevesiyle uyumlu olarak tasarlanmıştır.
+            </div>
           </div>
           <div style={{ background: SOFT, borderRadius: 16, padding: 28 }}>
             <div style={{ width: 56, height: 56, borderRadius: 9999, background: SOFT, border: `2px dashed #BDBDBD`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>+</div>
@@ -365,10 +387,12 @@ export default function InvestorPage() {
             Yatırımcı, belediye yöneticisi, kurumsal sponsor veya teknik ortak olarak iletişime geçebilirsiniz.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
-            <a href="mailto:oyunaadasi@gmail.com" style={{ background: '#fff', color: RED, fontWeight: 700, fontSize: 16, borderRadius: 9999, padding: '16px 40px', textDecoration: 'none', display: 'inline-block' }}>
-              oyunaadasi@gmail.com
+            <a href="mailto:talhayilmaz1@gmail.com" style={{ background: '#fff', color: RED, fontWeight: 700, fontSize: 16, borderRadius: 9999, padding: '16px 40px', textDecoration: 'none', display: 'inline-block' }}>
+              talhayilmaz1@gmail.com
             </a>
-            <div style={{ fontSize: 14, opacity: 0.75 }}>veya Telegram: @timurlenk9909</div>
+            <a href="tel:+905546597998" style={{ fontSize: 15, color: '#fff', opacity: 0.88, textDecoration: 'none', fontWeight: 600 }}>
+              +90 554 659 79 98
+            </a>
           </div>
         </div>
       </section>
