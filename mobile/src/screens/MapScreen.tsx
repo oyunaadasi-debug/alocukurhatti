@@ -4,7 +4,7 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { C, R, S, elevation } from '../theme';
+import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
 import { API_URL } from '../config';
 
 type Report = {
@@ -14,7 +14,7 @@ type Report = {
 };
 
 const STATUS_PIN: Record<string, string> = {
-  open:      C.primary,
+  open:      C.attention,
   forwarded: C.warning,
   reviewing: C.secondary,
   resolved:  C.success,
@@ -111,46 +111,66 @@ export default function MapScreen({ navigation, route }: any) {
       )}
 
       {!loading && (
-        <View style={s.countBadge}>
+        <View style={[s.countBadge, elevation(2)]}>
+          <View style={s.countDot} />
           <Text style={s.countBadgeText}>{badgeLabel}</Text>
         </View>
       )}
 
-      {/* Seçili rapor kartı */}
+      {/* Seçili rapor kartı — double-bezel (dış kabuk + iç çekirdek) */}
       {selected && (
-        <View style={[s.card, elevation(4)]}>
-          <Text style={s.cardTitle}>🕳️ Yol Hasarı</Text>
-          <Text style={s.cardAddr} numberOfLines={2}>
-            {selected.address || selected.district || selected.city || 'Konum bilgisi yok'}
-          </Text>
-          <Text style={s.cardMeta}>
-            👁 {selected.me_too_count} gördü · {new Date(selected.created_at).toLocaleDateString('tr-TR')}
-          </Text>
-          <TouchableOpacity
-            style={s.detailBtn}
-            onPress={() => navigation.navigate('ReportDetail', { reportId: selected.id })}
-          >
-            <Text style={s.detailBtnText}>Detayı Gör →</Text>
-          </TouchableOpacity>
+        <View style={[s.cardShell, elevation(4)]}>
+          <View style={s.cardCore}>
+            <View style={s.cardTopRow}>
+              <Text style={s.cardTitle}>Yol Hasarı</Text>
+              {(() => {
+                const sc = statusColor(selected.status);
+                return (
+                  <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
+                    <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(selected.status)}</Text>
+                  </View>
+                );
+              })()}
+            </View>
+            <Text style={s.cardAddr} numberOfLines={2}>
+              {selected.address || selected.district || selected.city || 'Konum bilgisi yok'}
+            </Text>
+            <Text style={s.cardMeta}>
+              {selected.me_too_count} kişi gördü · {new Date(selected.created_at).toLocaleDateString('tr-TR')}
+            </Text>
+            <TouchableOpacity
+              style={s.detailBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('ReportDetail', { reportId: selected.id })}
+            >
+              <Text style={s.detailBtnText}>Detayı Gör</Text>
+              <View style={s.detailBtnIcon}>
+                <Ionicons name="arrow-forward" size={15} color={C.onPrimary} />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
       {/* Konuma git */}
       <TouchableOpacity
-        style={[s.locateBtn, elevation(4), selected && { bottom: 240 }]}
+        style={[s.locateBtn, elevation(2), selected && { bottom: 248 }]}
+        activeOpacity={0.85}
         onPress={goToUser}
       >
-        <Ionicons name="locate" size={22} color={C.onDark} />
+        <Ionicons name="locate" size={21} color={C.ink} />
       </TouchableOpacity>
 
-      {/* Çukur Bildir — floating CTA */}
+      {/* Çukur Bildir — floating CTA (button-in-button) */}
       <TouchableOpacity
         style={[s.cta, elevation(6)]}
         onPress={() => navigation.navigate('AddReport', { userLocation: userLoc })}
-        activeOpacity={0.85}
+        activeOpacity={0.9}
       >
-        <Ionicons name="add-circle" size={22} color={C.onPrimary} />
         <Text style={s.ctaText}>Çukur Bildir</Text>
+        <View style={s.ctaIcon}>
+          <Ionicons name="add" size={20} color={C.primary} />
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -162,7 +182,7 @@ const s = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(251,249,244,0.6)',
   },
 
   pin: {
@@ -174,36 +194,67 @@ const s = StyleSheet.create({
 
   countBadge: {
     position: 'absolute', top: 14, alignSelf: 'center',
-    backgroundColor: 'rgba(33,33,33,0.72)',
-    paddingHorizontal: 14, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: S.xs,
+    backgroundColor: C.canvas,
+    paddingHorizontal: S.lg, paddingVertical: S.sm,
     borderRadius: R.pill,
+    borderWidth: 1, borderColor: C.canvasSofter,
   },
-  countBadgeText: { color: C.onDark, fontSize: 13, fontWeight: '600' },
+  countDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.attention },
+  countBadgeText: { color: C.ink, fontSize: 13, fontWeight: '700', letterSpacing: 0.1 },
 
-  card: {
-    position: 'absolute', bottom: 106, left: 16, right: 16,
-    backgroundColor: C.canvas, borderRadius: R.xxl,
+  // Double-bezel: dış kabuk (sıcak yüzey + hairline) → iç çekirdek (krem)
+  cardShell: {
+    position: 'absolute', bottom: 110, left: 16, right: 16,
+    backgroundColor: C.canvasSoft,
+    borderRadius: R.xxl + 6,
+    borderWidth: 1, borderColor: C.canvasSofter,
+    padding: 6,
+  },
+  cardCore: {
+    backgroundColor: C.canvas,
+    borderRadius: R.xxl,
     padding: S.lg, gap: S.xs,
   },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  cardAddr:  { fontSize: 13, color: C.body },
-  cardMeta:  { fontSize: 12, color: C.secondary },
-  detailBtn: { marginTop: S.xs, alignSelf: 'flex-end' },
-  detailBtnText: { fontSize: 13, color: C.primary, fontWeight: '600' },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: C.ink, letterSpacing: -0.2 },
+  statusPill: { paddingHorizontal: S.sm, paddingVertical: 3, borderRadius: R.pill },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+  cardAddr:  { fontSize: 13.5, color: C.body, lineHeight: 19 },
+  cardMeta:  { fontSize: 12, color: C.mute, fontWeight: '500' },
+  detailBtn: {
+    marginTop: S.sm, alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+    backgroundColor: C.primary,
+    paddingLeft: S.lg, paddingRight: 5, paddingVertical: 5,
+    borderRadius: R.pill,
+  },
+  detailBtnText: { fontSize: 13, color: C.onPrimary, fontWeight: '700' },
+  detailBtnIcon: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   locateBtn: {
-    position: 'absolute', bottom: 106, right: 16,
+    position: 'absolute', bottom: 108, right: 16,
     width: 48, height: 48, borderRadius: R.full,
-    backgroundColor: C.secondary,
+    backgroundColor: C.canvas,
+    borderWidth: 1, borderColor: C.canvasSofter,
     justifyContent: 'center', alignItems: 'center',
   },
 
   cta: {
-    position: 'absolute', bottom: 32, alignSelf: 'center',
-    flexDirection: 'row', alignItems: 'center', gap: S.xs,
+    position: 'absolute', bottom: 34, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: S.md,
     backgroundColor: C.primary,
-    paddingVertical: S.lg, paddingHorizontal: S.xl3,
+    paddingVertical: S.md, paddingLeft: S.xl3, paddingRight: S.sm,
     borderRadius: R.pill,
   },
-  ctaText: { color: C.onPrimary, fontSize: 15, fontWeight: '700' },
+  ctaText: { color: C.onPrimary, fontSize: 15.5, fontWeight: '800', letterSpacing: 0.1 },
+  ctaIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: C.canvas,
+    alignItems: 'center', justifyContent: 'center',
+  },
 });

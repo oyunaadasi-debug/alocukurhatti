@@ -1,37 +1,42 @@
 // DESIGN.md token sistemi — tüm renkler, tipografi, spacing buradan gelir
 // Ekranlarda doğrudan renk kodu yazmak yasak; T. kullanılır
 
+// Soft Structuralism paleti — sıcak krem zemin + nane/teal vurgu, yumuşak yüzen yüzeyler
 export const C = {
-  // Yüzeyler
-  canvas:        '#FFFFFF',
-  canvasSoft:    '#F5F5F5',
-  canvasSofter:  '#EEEEEE',
-  pressed:       '#E0E0E0',
-  dim:           '#BDBDBD',
+  // Yüzeyler (sıcak krem katmanları)
+  canvas:        '#FBF9F4',
+  canvasSoft:    '#F2EEE5',
+  canvasSofter:  '#E8E2D6',
+  pressed:       '#DED7C8',
+  dim:           '#B7B0A2',
 
-  // Metin
-  ink:    '#212121',
-  body:   '#616161',
-  mute:   '#9E9E9E',
-  onDark: '#FFFFFF',
+  // Metin (sıcak siyah → sıcak gri)
+  ink:    '#1B1A16',
+  body:   '#5C574D',
+  mute:   '#9A9488',
+  onDark: '#FBF9F4',
 
-  // Birincil — Alarm Kırmızısı (tek aksan)
-  primary:          '#E53935',
-  primaryDim:       '#C62828',
+  // Birincil — Nane/Teal vurgu
+  primary:          '#1FA98B',
+  primaryDim:       '#178A70',
   onPrimary:        '#FFFFFF',
-  primaryContainer: '#FFCDD2',
+  primaryContainer: '#CDEDE3',
 
-  // İkincil — Otorite Mavisi (sadece Ben de Gördüm)
-  secondary:   '#1565C0',
+  // İkincil — Yumuşatılmış otorite mavisi (sadece "Ben de Gördüm")
+  secondary:   '#3B6EA5',
   onSecondary: '#FFFFFF',
-  secondaryContainer: '#BBDEFB',
+  secondaryContainer: '#D6E4F2',
 
-  // Anlam renkleri
-  success:   '#2E7D32',
+  // Dikkat — açık raporlar için sıcak mercan (alarm değil ama göz çeker)
+  attention:   '#E76F4F',
+  onAttention: '#FFFFFF',
+
+  // Anlam renkleri (yumuşatılmış)
+  success:   '#2E9E6B',
   onSuccess: '#FFFFFF',
-  warning:   '#F57F17',
+  warning:   '#E0A23B',
   onWarning: '#FFFFFF',
-  error:     '#B71C1C',
+  error:     '#C9524B',
   onError:   '#FFFFFF',
 } as const;
 
@@ -56,23 +61,23 @@ export const S = {
   xl3: 32,
 } as const;
 
-// Elevation gölgesi (iOS + Android)
+// Yumuşak, dağılmış ambient gölge (sıcak gölge rengi, geniş yarıçap — Soft Structuralism)
 export const elevation = (level: 0 | 1 | 2 | 4 | 6) => ({
   elevation: level,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: level * 0.8 },
-  shadowOpacity: level === 0 ? 0 : 0.08 + level * 0.02,
-  shadowRadius: level * 2,
+  shadowColor: '#3A352A',
+  shadowOffset: { width: 0, height: level * 1.6 },
+  shadowOpacity: level === 0 ? 0 : 0.05 + level * 0.012,
+  shadowRadius: level * 4,
 });
 
 // Durum rengi (rapor statüsüne göre)
 export const statusColor = (status: string) => {
   switch (status) {
-    case 'resolved':  return { bg: C.success,  text: C.onSuccess };
-    case 'forwarded': return { bg: C.warning,  text: C.onWarning };
-    case 'reviewing': return { bg: C.secondary,text: C.onSecondary };
+    case 'resolved':  return { bg: C.success,   text: C.onSuccess };
+    case 'forwarded': return { bg: C.warning,   text: C.onWarning };
+    case 'reviewing': return { bg: C.secondary, text: C.onSecondary };
     case 'rejected':  return { bg: C.canvasSofter, text: C.mute };
-    default:          return { bg: C.primary,  text: C.onPrimary };
+    default:          return { bg: C.attention, text: C.onAttention };
   }
 };
 
