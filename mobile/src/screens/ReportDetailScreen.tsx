@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, Image, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, StyleSheet,
+  ActivityIndicator, Alert, StyleSheet, Share, Linking,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
 import { StatusBadge, MetaRow, SectionTitle, Divider } from '../components/ui';
 import { API_URL } from '../config';
+import { belediyeFor, buildComplaintText, issueLabel, CIMER_URL, ALO_153 } from '../data/belediyeler';
 
 export default function ReportDetailScreen({ route }: any) {
   const { reportId } = route.params;
@@ -43,6 +45,23 @@ export default function ReportDetailScreen({ route }: any) {
     }
   }
 
+  const complaintText = report ? buildComplaintText(report) : '';
+  const bld = report ? belediyeFor(report.city) : undefined;
+
+  async function onShare() {
+    try { await Share.share({ message: complaintText }); } catch {}
+  }
+  async function onCopy() {
+    await Clipboard.setStringAsync(complaintText);
+    Alert.alert('Kopyalandı', 'Şikayet metni panoya kopyalandı. Açılan forma yapıştırabilirsiniz.');
+  }
+  async function openWith(url: string, copyFirst = true) {
+    if (copyFirst) await Clipboard.setStringAsync(complaintText);
+    const ok = await Linking.canOpenURL(url);
+    if (ok) Linking.openURL(url);
+    else Alert.alert('Açılamadı', 'Bağlantı açılamadı.');
+  }
+
   if (loading) return (
     <View style={s.center}><ActivityIndicator size="large" color={C.primary} /></View>
   );
@@ -66,6 +85,12 @@ export default function ReportDetailScreen({ route }: any) {
       </View>
 
       <View style={s.body}>
+        {/* Sorun türü */}
+        <View style={s.typeChip}>
+          <Ionicons name="warning-outline" size={14} color={C.attention} />
+          <Text style={s.typeChipText}>{issueLabel(report.issue_type)}</Text>
+        </View>
+
         {/* Konum */}
         <MetaRow
           icon={<Ionicons name="location" size={16} color={C.primary} />}
@@ -117,6 +142,49 @@ export default function ReportDetailScreen({ route }: any) {
           )}
         </TouchableOpacity>
 
+        {/* Belediyeye İlet */}
+        <Divider />
+        <SectionTitle text="Belediyeye İlet" />
+        <View style={[s.iletShell, elevation(2)]}>
+          <View style={s.iletCore}>
+            <Text style={s.iletHint}>
+              Hazır şikayet metniyle doğru kanala ilet. Web/CİMER açılınca metin panoya kopyalanır,
+              forma yapıştırman yeterli.
+            </Text>
+
+            <TouchableOpacity style={[s.iletBtn, s.iletPrimary]} onPress={onShare} activeOpacity={0.85}>
+              <Ionicons name="share-social" size={18} color={C.onPrimary} />
+              <Text style={[s.iletBtnText, { color: C.onPrimary }]}>Paylaş (WhatsApp, e-posta…)</Text>
+            </TouchableOpacity>
+
+            {bld?.web ? (
+              <TouchableOpacity style={s.iletBtn} onPress={() => openWith(bld.web!)} activeOpacity={0.85}>
+                <Ionicons name="business-outline" size={18} color={C.ink} />
+                <Text style={s.iletBtnText}>{report.city} Belediyesi şikayet sayfası</Text>
+                <Ionicons name="open-outline" size={15} color={C.mute} />
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity style={s.iletBtn} onPress={() => openWith(CIMER_URL)} activeOpacity={0.85}>
+              <Ionicons name="globe-outline" size={18} color={C.ink} />
+              <Text style={s.iletBtnText}>CİMER'e ilet (her il için geçerli)</Text>
+              <Ionicons name="open-outline" size={15} color={C.mute} />
+            </TouchableOpacity>
+
+            {bld?.buyuksehir ? (
+              <TouchableOpacity style={s.iletBtn} onPress={() => openWith(`tel:${ALO_153}`, false)} activeOpacity={0.85}>
+                <Ionicons name="call-outline" size={18} color={C.ink} />
+                <Text style={s.iletBtnText}>Ara: Alo 153 çözüm hattı</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity style={s.iletBtn} onPress={onCopy} activeOpacity={0.85}>
+              <Ionicons name="copy-outline" size={18} color={C.ink} />
+              <Text style={s.iletBtnText}>Şikayet metnini kopyala</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Çözüm kanıtları */}
         {report.resolutions?.length > 0 && (
           <>
@@ -154,6 +222,28 @@ const s = StyleSheet.create({
   },
 
   body: { padding: S.lg, gap: S.md },
+
+  typeChip: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: S.xs,
+    backgroundColor: C.canvas, borderWidth: 1, borderColor: C.canvasSofter,
+    paddingHorizontal: S.md, paddingVertical: 5, borderRadius: R.pill,
+  },
+  typeChipText: { fontSize: 12.5, fontWeight: '700', color: C.ink },
+
+  // Belediyeye İlet — double-bezel kart
+  iletShell: {
+    backgroundColor: C.canvasSoft, borderRadius: R.xxl + 6,
+    borderWidth: 1, borderColor: C.canvasSofter, padding: 6,
+  },
+  iletCore: { backgroundColor: C.canvas, borderRadius: R.xxl, padding: S.lg, gap: S.sm },
+  iletHint: { fontSize: 12.5, color: C.body, lineHeight: 18, marginBottom: S.xs },
+  iletBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+    backgroundColor: C.canvasSoft, borderRadius: R.lg,
+    paddingVertical: S.md, paddingHorizontal: S.md,
+  },
+  iletPrimary: { backgroundColor: C.primary },
+  iletBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
 
   descBox: {
     backgroundColor: C.canvas, borderRadius: R.lg, padding: S.lg,
