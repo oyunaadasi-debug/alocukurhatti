@@ -5,3 +5,13 @@ node_modules/
 .expo/
 android/
 ios/
+
+# Build artifacts / TypeScript cache
+*.tsbuildinfo
+
+# Yerel geçici dosyalar (ekran görüntüsü, QR)
+screenshot_mobile.png
+mobile/expo_qr.png
+
+# Pazarlama/lansman klasörü — kişisel veri (e-posta listesi, gönderim logu) içerir, kod reposuna girmez
+cukurhattilansman/

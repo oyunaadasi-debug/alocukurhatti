@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { param, body, query, validationResult } = require('express-validator');
 const pool = require('../db/pool');
-const { cloudinary } = require('../middleware/upload');
+const { deleteFromBlob } = require('../middleware/upload');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { sendExpoPushNotification } = require('./notifications');
 
@@ -76,6 +76,8 @@ router.post('/reports/:id/approve', param('id').isInt(), async (req, res) => {
       [req.params.id]
     );
     if (!rowCount) return res.status(404).json({ error: 'Rapor bulunamadı veya zaten işlendi.' });
+
+    await notifyReportOwner(req.params.id, 'Şikayetiniz yayınlandı 🎉', 'Bildirdiğiniz çukur haritada görünüyor. Teşekkürler!');
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -95,13 +97,13 @@ router.post('/reports/:id/reject', [
     const { rows } = await pool.query(
       `UPDATE reports SET moderation_status = 'rejected', updated_at = NOW()
        WHERE id = $1
-       RETURNING photo_public_id`,
+       RETURNING photo_url`,
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });
 
-    if (rows[0].photo_public_id) {
-      await cloudinary.uploader.destroy(rows[0].photo_public_id).catch(() => {});
+    if (rows[0].photo_url) {
+      await deleteFromBlob(rows[0].photo_url);
     }
 
     res.json({ success: true });
@@ -146,13 +148,13 @@ router.delete('/reports/:id', param('id').isInt(), async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'DELETE FROM reports WHERE id = $1 RETURNING photo_public_id',
+      'DELETE FROM reports WHERE id = $1 RETURNING photo_url',
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });
 
-    if (rows[0].photo_public_id) {
-      await cloudinary.uploader.destroy(rows[0].photo_public_id).catch(() => {});
+    if (rows[0].photo_url) {
+      await deleteFromBlob(rows[0].photo_url);
     }
 
     res.json({ success: true });

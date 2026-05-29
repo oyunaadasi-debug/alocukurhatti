@@ -1,11 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { body, query, param, validationResult } = require('express-validator');
 const pool = require('../db/pool');
 const { upload, uploadToBlob, deleteFromBlob } = require('../middleware/upload');
 const { checkImageSafe, checkVisionSafe } = require('../middleware/moderation');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { reverseGeocode } = require('../middleware/geocode');
+
+function hashIp(ip) {
+  const salt = process.env.IP_HASH_SALT || process.env.JWT_SECRET || 'default-salt';
+  return crypto.createHash('sha256').update(salt + ip).digest('hex');
+}
 
 // GET /api/reports
 router.get('/', [
@@ -30,7 +36,7 @@ router.get('/', [
       const lngDelta = radF / (111.0 * Math.cos(latF * Math.PI / 180));
       queryText = `
         SELECT id, lat, lng, address, city, district, photo_url,
-               description, reporter_name, status, me_too_count, created_at,
+               description, reporter_name, status, me_too_count, created_at, issue_type,
                ROUND(CAST(
                  6371 * 2 * ASIN(SQRT(
                    POWER(SIN(RADIANS(($1::float - lat) / 2)), 2) +
@@ -52,7 +58,7 @@ router.get('/', [
     } else {
       queryText = `
         SELECT id, lat, lng, address, city, district, photo_url,
-               description, reporter_name, status, me_too_count, created_at
+               description, reporter_name, status, me_too_count, created_at, issue_type
         FROM reports
         WHERE moderation_status = 'approved'
           AND ($1::text IS NULL OR status = $1)
@@ -71,6 +77,25 @@ router.get('/', [
   }
 });
 
+// GET /api/reports/my — kullanıcının kendi raporları
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, lat, lng, address, city, district, photo_url,
+              description, status, me_too_count, created_at
+       FROM reports
+       WHERE user_id = $1 AND moderation_status = 'approved'
+       ORDER BY created_at DESC
+       LIMIT 200`,
+      [req.user.id]
+    );
+    res.json({ reports: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
 // GET /api/reports/:id
 router.get('/:id', param('id').isInt(), async (req, res) => {
   const errors = validationResult(req);
@@ -80,11 +105,10 @@ router.get('/:id', param('id').isInt(), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT r.*,
-              json_agg(res ORDER BY res.created_at DESC) FILTER (WHERE res.id IS NOT NULL) AS resolutions
+              (SELECT json_agg(res ORDER BY res.created_at DESC) FROM resolutions res WHERE res.report_id = r.id) AS resolutions,
+              (SELECT json_agg(upd ORDER BY upd.created_at DESC) FROM report_updates upd WHERE upd.report_id = r.id) AS updates
        FROM reports r
-       LEFT JOIN resolutions res ON res.report_id = r.id
-       WHERE r.id = $1 AND r.moderation_status = 'approved'
-       GROUP BY r.id`,
+       WHERE r.id = $1 AND r.moderation_status = 'approved'`,
       [id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });
@@ -96,11 +120,12 @@ router.get('/:id', param('id').isInt(), async (req, res) => {
 });
 
 // POST /api/reports
-router.post('/', upload.single('photo'), [
+router.post('/', optionalAuth, upload.single('photo'), [
   body('lat').isFloat({ min: 35, max: 43 }).withMessage('Geçersiz enlem (Türkiye sınırları dışı).'),
   body('lng').isFloat({ min: 25, max: 45 }).withMessage('Geçersiz boylam (Türkiye sınırları dışı).'),
   body('description').optional().isString().trim().isLength({ max: 500 }),
   body('reporter_name').optional().isString().trim().isLength({ max: 100 }),
+  body('issue_type').optional().isIn(['cukur', 'bozuk_yol', 'kaldirim', 'tumsek', 'su_birikintisi']),
   body('address').optional().isString().trim().isLength({ max: 300 }),
   body('city').optional().isString().trim().isLength({ max: 100 }),
   body('district').optional().isString().trim().isLength({ max: 100 }),
@@ -113,7 +138,7 @@ router.post('/', upload.single('photo'), [
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { lat, lng, description, reporter_name } = req.body;
+  const { lat, lng, description, reporter_name, issue_type = 'cukur' } = req.body;
   let { address, city, district } = req.body;
 
   // Blob'a yükle
@@ -142,15 +167,17 @@ router.post('/', upload.single('photo'), [
     return res.status(422).json({ error: visionCheck.reason });
   }
 
-  const reporterIp = req.ip;
+  const reporterIp = hashIp(req.ip);
+  const userId = req.user?.id || null;
   try {
     const { rows } = await pool.query(
       `INSERT INTO reports (lat, lng, photo_url, photo_public_id, description,
-                            reporter_name, reporter_ip, address, city, district)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, lat, lng, photo_url, description, reporter_name, status, me_too_count, created_at`,
+                            reporter_name, reporter_ip, address, city, district, user_id, issue_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, lat, lng, photo_url, description, reporter_name, status, me_too_count, created_at, issue_type`,
       [lat, lng, photoUrl, photoPublicId, description || null,
-       reporter_name || null, reporterIp, address || null, city || null, district || null]
+       reporter_name || null, reporterIp, address || null, city || null, district || null, userId,
+       ['cukur', 'bozuk_yol', 'kaldirim', 'tumsek', 'su_birikintisi'].includes(issue_type) ? issue_type : 'cukur']
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -166,7 +193,7 @@ router.post('/:id/metoo', param('id').isInt(), async (req, res) => {
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { id } = req.params;
-  const ip = req.ip;
+  const ip = hashIp(req.ip);
   try {
     await pool.query(
       `INSERT INTO me_too (report_id, reporter_ip) VALUES ($1, $2)
@@ -234,13 +261,58 @@ router.post('/:id/resolve', requireAuth, upload.single('photo'), [
   }
 });
 
+// POST /api/reports/:id/updates — vatandaş güncelleme
+router.post('/:id/updates', upload.single('photo'), [
+  param('id').isInt(),
+  body('update_type').isIn(['complaint_joined', 'resolution_proof', 'still_unresolved']),
+  body('note').optional().isString().trim().isLength({ max: 300 }),
+  body('reporter_name').optional().isString().trim().isLength({ max: 100 }),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { id } = req.params;
+  const { update_type, note, reporter_name } = req.body;
+  const reporterIp = hashIp(req.ip);
+
+  if (update_type === 'resolution_proof' && !req.file) {
+    return res.status(400).json({ error: 'Çözüm kanıtı için fotoğraf zorunludur.' });
+  }
+
+  try {
+    const { rows: reportRows } = await pool.query(
+      `SELECT id FROM reports WHERE id = $1 AND moderation_status = 'approved'`, [id]
+    );
+    if (!reportRows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });
+
+    let photoUrl = null, photoPublicId = null;
+    if (req.file) {
+      const mimeCheck = checkImageSafe(req);
+      if (!mimeCheck.safe) return res.status(422).json({ error: mimeCheck.reason });
+      const blob = await uploadToBlob(req.file);
+      photoUrl = blob.url;
+      photoPublicId = blob.pathname;
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO report_updates (report_id, update_type, photo_url, photo_public_id, note, reporter_name, reporter_ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [id, update_type, photoUrl, photoPublicId, note || null, reporter_name || null, reporterIp]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
 // POST /api/reports/:id/flag
 router.post('/:id/flag', param('id').isInt(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { id } = req.params;
-  const ip = req.ip;
+  const ip = hashIp(req.ip);
   try {
     const exists = await pool.query('SELECT id FROM reports WHERE id = $1', [id]);
     if (!exists.rows.length) return res.status(404).json({ error: 'Rapor bulunamadı.' });

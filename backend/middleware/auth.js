@@ -23,4 +23,16 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    try {
+      req.user = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    } catch {
+      // geçersiz token — kullanıcısız devam et
+    }
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireRole, optionalAuth };

@@ -68,4 +68,27 @@ router.get('/cities/:city', async (req, res) => {
   }
 });
 
+// GET /api/stats/reporters — en duyarlı vatandaşlar (kayıtlı kullanıcılar)
+router.get('/reporters', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        u.id,
+        COALESCE(u.name, split_part(u.email, '@', 1)) AS display_name,
+        COUNT(r.id)         AS report_count,
+        SUM(r.me_too_count) AS total_metoo,
+        COUNT(r.id) FILTER (WHERE r.status = 'resolved') AS resolved_count
+      FROM users u
+      JOIN reports r ON r.user_id = u.id AND r.moderation_status = 'approved'
+      GROUP BY u.id, u.name, u.email
+      ORDER BY report_count DESC, total_metoo DESC
+      LIMIT 20
+    `);
+    res.json({ reporters: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
 module.exports = router;
