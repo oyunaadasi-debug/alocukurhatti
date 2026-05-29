@@ -38,10 +38,11 @@ export default function RegisterScreen({ navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         contentContainerStyle={s.scroll}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
       >
         <View style={s.hero}>
@@ -170,11 +171,11 @@ const s = StyleSheet.create({
 
   infoBox: {
     flexDirection: 'row', gap: S.xs,
-    backgroundColor: '#E3F0FF',
+    backgroundColor: C.secondaryContainer,
     borderRadius: R.md, padding: S.md,
     alignItems: 'flex-start',
   },
-  infoText: { flex: 1, fontSize: 12, color: '#0D47A1', lineHeight: 18 },
+  infoText: { flex: 1, fontSize: 12, color: C.secondary, lineHeight: 18 },
 
   primaryBtn: {
     backgroundColor: C.primary,

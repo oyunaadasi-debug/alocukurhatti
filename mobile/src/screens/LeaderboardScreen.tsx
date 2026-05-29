@@ -290,7 +290,7 @@ const s = StyleSheet.create({
   openLbl: { fontSize: 11, color: C.mute },
 
   mapChip: {
-    backgroundColor: '#E3F0FF', borderRadius: R.sm,
+    backgroundColor: C.secondaryContainer, borderRadius: R.sm,
     padding: S.xs, marginRight: S.xxs,
   },
 
