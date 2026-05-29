@@ -8,12 +8,12 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#E53935"
+      "backgroundColor": "#FBF9F4"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#E53935"
+        "backgroundColor": "#1FA98B"
       },
       "package": "com.talha.alocukurhatti",
       "permissions": [
@@ -28,8 +28,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.talha.alocukurhatti",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Çukurun konumunu otomatik tespit etmek için konum iznine ihtiyacımız var.",
-        "NSCameraUsageDescription": "Çukurun fotoğrafını çekmek için kamera iznine ihtiyacımız var.",
+        "NSLocationWhenInUseUsageDescription": "Sorunun konumunu otomatik tespit etmek için konum iznine ihtiyacımız var.",
+        "NSCameraUsageDescription": "Sorunun fotoğrafını çekmek için kamera iznine ihtiyacımız var.",
         "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor."
       }
     },
