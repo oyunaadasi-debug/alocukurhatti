@@ -1,8 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const pool = require('./db/pool');
+
+// Üretimde JWT_SECRET zorunlu — eksikse token'lar güvensiz olur, başlatma durdurulur
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET tanımlı değil. Sunucu başlatılmıyor.');
+  process.exit(1);
+}
 const reportsRouter = require('./routes/reports');
 const statsRouter = require('./routes/stats');
 const authRouter = require('./routes/auth');
@@ -14,6 +21,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
