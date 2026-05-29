@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert, ScrollView } from 'react-native';
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
 import { API_URL } from '../config';
+import { ISSUE_TYPES, issueIcon, issueLabel } from '../data/belediyeler';
 
 type Report = {
   id: number; lat: number; lng: number;
   address: string; city: string; district: string;
-  me_too_count: number; status: string; created_at: string;
+  me_too_count: number; status: string; created_at: string; issue_type?: string;
 };
 
 const STATUS_PIN: Record<string, string> = {
@@ -31,6 +32,7 @@ export default function MapScreen({ navigation, route }: any) {
   const [loading, setLoading]   = useState(true);
   const [userLoc, setUserLoc]   = useState<{ lat: number; lng: number } | null>(null);
   const [selected, setSelected] = useState<Report | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [region, setRegion]     = useState<Region>({
     latitude: centerLat ?? 39.0, longitude: centerLng ?? 35.0,
     latitudeDelta: filterDistrict ? 0.05 : filterCity ? 0.5 : 8,
@@ -74,10 +76,12 @@ export default function MapScreen({ navigation, route }: any) {
     }, 500);
   }
 
+  const visibleReports = typeFilter ? reports.filter(r => r.issue_type === typeFilter) : reports;
+
   const badgeLabel = filterDistrict
-    ? `${filterDistrict} — ${reports.length} rapor`
-    : filterCity ? `${filterCity} — ${reports.length} açık rapor`
-    : `${reports.length} açık rapor`;
+    ? `${filterDistrict} — ${visibleReports.length} rapor`
+    : filterCity ? `${filterCity} — ${visibleReports.length} açık rapor`
+    : `${visibleReports.length} açık rapor`;
 
   return (
     <View style={s.container}>
@@ -90,7 +94,7 @@ export default function MapScreen({ navigation, route }: any) {
         showsUserLocation
         showsMyLocationButton={false}
       >
-        {reports.map(r => (
+        {visibleReports.map(r => (
           <Marker
             key={r.id}
             coordinate={{ latitude: r.lat, longitude: r.lng }}
@@ -117,12 +121,44 @@ export default function MapScreen({ navigation, route }: any) {
         </View>
       )}
 
+      {/* Sorun türü filtresi */}
+      {!loading && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.filterBar}
+          contentContainerStyle={s.filterContent}
+        >
+          <TouchableOpacity
+            style={[s.filterChip, !typeFilter && s.filterChipActive, elevation(1)]}
+            onPress={() => setTypeFilter(null)}
+            activeOpacity={0.85}
+          >
+            <Text style={[s.filterChipText, !typeFilter && s.filterChipTextActive]}>Tümü</Text>
+          </TouchableOpacity>
+          {ISSUE_TYPES.map(t => {
+            const active = typeFilter === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={[s.filterChip, active && s.filterChipActive, elevation(1)]}
+                onPress={() => setTypeFilter(active ? null : t.key)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name={t.icon as any} size={14} color={active ? C.onPrimary : C.body} />
+                <Text style={[s.filterChipText, active && s.filterChipTextActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* Seçili rapor kartı — double-bezel (dış kabuk + iç çekirdek) */}
       {selected && (
         <View style={[s.cardShell, elevation(4)]}>
           <View style={s.cardCore}>
             <View style={s.cardTopRow}>
-              <Text style={s.cardTitle}>Yol Hasarı</Text>
+              <Text style={s.cardTitle}>{issueLabel(selected.issue_type)}</Text>
               {(() => {
                 const sc = statusColor(selected.status);
                 return (
@@ -202,6 +238,23 @@ const s = StyleSheet.create({
   },
   countDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.attention },
   countBadgeText: { color: C.ink, fontSize: 13, fontWeight: '700', letterSpacing: 0.1 },
+
+  // Sorun türü filtre barı
+  filterBar: {
+    position: 'absolute', top: 56, left: 0, right: 0,
+    maxHeight: 40,
+  },
+  filterContent: { paddingHorizontal: S.md, gap: S.xs, alignItems: 'center' },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: C.canvas,
+    paddingHorizontal: S.md, paddingVertical: S.xs,
+    borderRadius: R.pill,
+    borderWidth: 1, borderColor: C.canvasSofter,
+  },
+  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  filterChipText: { fontSize: 12.5, fontWeight: '700', color: C.body },
+  filterChipTextActive: { color: C.onPrimary },
 
   // Double-bezel: dış kabuk (sıcak yüzey + hairline) → iç çekirdek (krem)
   cardShell: {

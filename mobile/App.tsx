@@ -62,6 +62,7 @@ function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profilim' }} />
+      <Stack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ title: 'Rapor Detayı' }} />
     </Stack.Navigator>
   );
 }

@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { C, R, S, elevation } from '../theme';
+import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
+import { API_URL } from '../config';
+
+type MyReport = {
+  id: number; address: string; city: string; district: string;
+  status: string; me_too_count: number; created_at: string;
+};
 
 const ROLE_LABEL: Record<string, string> = {
   citizen:      '👤 Vatandaş',
@@ -16,6 +24,23 @@ const ROLE_LABEL: Record<string, string> = {
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [myReports, setMyReports] = useState<MyReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      let active = true;
+      setLoadingReports(true);
+      axios.get(`${API_URL}/reports/my`)
+        .then(({ data }) => { if (active) setMyReports(data.reports); })
+        .catch(() => {})
+        .finally(() => { if (active) setLoadingReports(false); });
+      return () => { active = false; };
+    }, [user])
+  );
+
+  const resolvedCount = myReports.filter(r => r.status === 'resolved').length;
 
   async function handleLogout() {
     Alert.alert('Çıkış Yap', 'Hesabınızdan çıkmak istediğinize emin misiniz?', [
@@ -70,6 +95,51 @@ export default function ProfileScreen({ navigation }: any) {
         <View style={s.sep} />
         <InfoRow icon="finger-print-outline" label="Kullanıcı ID" value={`#${user.id}`} />
       </View>
+
+      {/* Raporlarım — çözülenler bildirim olarak öne çıkar */}
+      <View style={s.reportsHeader}>
+        <Text style={s.sectionTitle}>Raporlarım</Text>
+        {resolvedCount > 0 && (
+          <View style={s.resolvedBadge}>
+            <Ionicons name="checkmark-circle" size={14} color={C.onSuccess} />
+            <Text style={s.resolvedBadgeText}>{resolvedCount} çözüldü</Text>
+          </View>
+        )}
+      </View>
+
+      {loadingReports ? (
+        <ActivityIndicator color={C.primary} style={{ paddingVertical: S.lg }} />
+      ) : myReports.length === 0 ? (
+        <View style={[s.emptyReports, elevation(1)]}>
+          <Ionicons name="document-text-outline" size={28} color={C.dim} />
+          <Text style={s.emptyText}>Henüz rapor göndermediniz.</Text>
+        </View>
+      ) : (
+        myReports.map(r => {
+          const sc = statusColor(r.status);
+          const isResolved = r.status === 'resolved';
+          return (
+            <TouchableOpacity
+              key={r.id}
+              style={[s.reportCard, isResolved && s.reportCardResolved, elevation(1)]}
+              onPress={() => navigation.navigate('ReportDetail', { reportId: r.id })}
+              activeOpacity={0.85}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.reportAddr} numberOfLines={1}>
+                  {[r.address, r.district, r.city].filter(Boolean).join(', ') || 'Konum bilgisi yok'}
+                </Text>
+                <Text style={s.reportMeta}>
+                  {new Date(r.created_at).toLocaleDateString('tr-TR')} · {r.me_too_count} kişi gördü
+                </Text>
+              </View>
+              <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
+                <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(r.status)}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })
+      )}
 
       {/* Çıkış */}
       <TouchableOpacity
@@ -148,6 +218,35 @@ const s = StyleSheet.create({
   infoLabel: { fontSize: 12, color: C.mute },
   infoValue: { fontSize: 15, color: C.ink, fontWeight: '500' },
   sep:       { height: 1, backgroundColor: C.canvasSofter },
+
+  // Raporlarım
+  reportsHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: S.xs,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: C.ink },
+  resolvedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: C.success, borderRadius: R.pill,
+    paddingHorizontal: S.sm, paddingVertical: 3,
+  },
+  resolvedBadgeText: { color: C.onSuccess, fontSize: 12, fontWeight: '700' },
+
+  emptyReports: {
+    backgroundColor: C.canvas, borderRadius: R.lg, padding: S.xl,
+    alignItems: 'center', gap: S.sm,
+  },
+  emptyText: { fontSize: 13, color: C.mute },
+
+  reportCard: {
+    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+    backgroundColor: C.canvas, borderRadius: R.lg, padding: S.md,
+  },
+  reportCardResolved: { borderWidth: 1.5, borderColor: C.success },
+  reportAddr: { fontSize: 14, fontWeight: '600', color: C.ink },
+  reportMeta: { fontSize: 12, color: C.mute, marginTop: 2 },
+  statusPill:     { paddingHorizontal: S.sm, paddingVertical: 3, borderRadius: R.pill },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
 
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

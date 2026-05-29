@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, StyleSheet, Share, Linking,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
@@ -28,6 +29,7 @@ export default function ReportDetailScreen({ route }: any) {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting]   = useState(false);
   const [voted, setVoted]     = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => { fetch(); }, []);
 
@@ -54,6 +56,49 @@ export default function ReportDetailScreen({ route }: any) {
     } finally {
       setVoting(false);
     }
+  }
+
+  // Vatandaş güncellemesi: hâlâ aynı / düzeldi (foto ile)
+  async function postUpdate(updateType: 'still_unresolved' | 'resolution_proof', photoUri?: string) {
+    setUpdating(true);
+    try {
+      const fd = new FormData();
+      fd.append('update_type', updateType);
+      if (photoUri) fd.append('photo', { uri: photoUri, type: 'image/jpeg', name: 'update.jpg' } as any);
+      await axios.post(`${API_URL}/reports/${reportId}/updates`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000,
+      });
+      await fetch();
+      Alert.alert('Teşekkürler!', 'Güncellemeniz kaydedildi.');
+    } catch (err: any) {
+      Alert.alert('Hata', err.response?.data?.error || 'Güncelleme gönderilemedi.');
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function reportStillSame() {
+    if (updating) return;
+    Alert.alert('Hâlâ Aynı mı?', 'Bu sorunun hâlâ devam ettiğini bildirmek istiyor musunuz?', [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Evet, hâlâ aynı', onPress: () => postUpdate('still_unresolved') },
+    ]);
+  }
+
+  async function reportFixed() {
+    if (updating) return;
+    Alert.alert('Düzelmiş mi?', 'Düzeldiğini kanıtlamak için bir fotoğraf ekleyin.', [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Kamera', onPress: async () => {
+        const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+        if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+      } },
+      { text: 'Galeri', onPress: async () => {
+        const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+        if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+      } },
+    ]);
   }
 
   const complaintText = report ? buildComplaintText(report) : '';
@@ -166,6 +211,65 @@ export default function ReportDetailScreen({ route }: any) {
             </>
           )}
         </TouchableOpacity>
+
+        {/* Durum Güncelle — vatandaş geri bildirimi */}
+        <Divider />
+        <SectionTitle text="Durum Güncelle" />
+        <Text style={s.updHint}>Bu sorunu bizzat gördünüz mü? Güncel durumu bildirerek herkese yardımcı olun.</Text>
+        <View style={s.updRow}>
+          <TouchableOpacity
+            style={[s.updBtn, s.updStill]}
+            onPress={reportStillSame}
+            disabled={updating}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color={C.attention} />
+            <Text style={[s.updBtnText, { color: C.attention }]}>Hâlâ Aynı</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.updBtn, s.updFixed]}
+            onPress={reportFixed}
+            disabled={updating}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="checkmark-circle-outline" size={18} color={C.success} />
+            <Text style={[s.updBtnText, { color: C.success }]}>Düzeldi (foto)</Text>
+          </TouchableOpacity>
+        </View>
+        {updating && <ActivityIndicator color={C.primary} style={{ marginTop: S.xs }} />}
+
+        {/* Vatandaş güncellemeleri */}
+        {report.updates?.length > 0 && (
+          <View style={{ gap: S.sm, marginTop: S.sm }}>
+            {report.updates.map((u: any, i: number) => {
+              const fixed = u.update_type === 'resolution_proof';
+              return (
+                <View key={i} style={[s.updCard, elevation(1)]}>
+                  <View style={s.updCardHead}>
+                    <Ionicons
+                      name={fixed ? 'checkmark-circle' : 'alert-circle'}
+                      size={16}
+                      color={fixed ? C.success : C.attention}
+                    />
+                    <Text style={s.updCardLabel}>
+                      {fixed ? 'Vatandaş düzeldiğini bildirdi' : 'Vatandaş hâlâ aynı dedi'}
+                    </Text>
+                  </View>
+                  {u.note ? <Text style={s.updCardNote}>{u.note}</Text> : null}
+                  {u.photo_url ? (
+                    <Image source={{ uri: u.photo_url }} style={s.updCardPhoto} resizeMode="cover" />
+                  ) : null}
+                  <Text style={s.updCardDate}>
+                    {new Date(u.created_at).toLocaleDateString('tr-TR')}
+                    {durationText(report.created_at, u.created_at)
+                      ? `  ·  bildirimden ${durationText(report.created_at, u.created_at)} sonra`
+                      : ''}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* Belediyeye İlet */}
         <Divider />
@@ -303,6 +407,25 @@ const s = StyleSheet.create({
     borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 3,
   },
   meTooCountText: { color: C.onDark, fontWeight: '800', fontSize: 15 },
+
+  // Durum güncelle
+  updHint: { fontSize: 12.5, color: C.body, lineHeight: 18 },
+  updRow:  { flexDirection: 'row', gap: S.sm },
+  updBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.xs,
+    backgroundColor: C.canvas, borderWidth: 1.5,
+    borderRadius: R.lg, paddingVertical: S.md,
+  },
+  updStill:    { borderColor: C.attention },
+  updFixed:    { borderColor: C.success },
+  updBtnText:  { fontSize: 14, fontWeight: '700' },
+
+  updCard: { backgroundColor: C.canvas, borderRadius: R.lg, padding: S.md, gap: S.xs },
+  updCardHead:  { flexDirection: 'row', alignItems: 'center', gap: S.xs },
+  updCardLabel: { fontSize: 13, fontWeight: '700', color: C.ink },
+  updCardNote:  { fontSize: 13, color: C.body },
+  updCardPhoto: { width: '100%', height: 160, borderRadius: R.md },
+  updCardDate:  { fontSize: 11, color: C.mute },
 
   // Çözüm kartı
   resCard: {
