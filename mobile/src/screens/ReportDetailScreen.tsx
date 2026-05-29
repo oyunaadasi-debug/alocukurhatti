@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, Image, ScrollView, TouchableOpacity,
+  View, Image, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, StyleSheet, Share, Linking,
 } from 'react-native';
+import { Text } from '../components/AppText';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';

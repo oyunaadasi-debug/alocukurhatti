@@ -1,6 +1,7 @@
 // Ortak UI bileşenleri — DESIGN.md token sistemine göre
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { Text } from './AppText';
 import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
 
 // ── Pill Butonu ──────────────────────────────────────────────────
