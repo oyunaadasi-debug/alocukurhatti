@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '{}').file_path || ''; if (p.includes('.env') && !p.includes('.env.example')) { console.error('ENGELLENDI: .env dosyaları doğrudan düzenlenemez. Sadece .env.example düzenlenebilir.'); process.exit(1); }\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p = JSON.parse(process.env.CLAUDE_TOOL_INPUT || '{}').file_path || ''; if ((p.endsWith('.tsx') || p.endsWith('.ts')) && p.includes('/web/')) { const { execSync } = require('child_process'); try { execSync('npx tsc --noEmit', { cwd: p.replace(/\\/web\\/.*/, '/web'), stdio: 'pipe' }); } catch(e) { console.error('TypeScript hatası:\\n' + e.stdout?.toString()); } }\""
+          }
+        ]
+      }
+    ]
+  }
+}
