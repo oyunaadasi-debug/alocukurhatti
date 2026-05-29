@@ -1,6 +1,6 @@
 // Bağlantı dizesi ortam değişkeninden okunur — koda asla gömülmez.
 // Production DB için: `vercel env pull .env.prod --environment=production`
-// sonra: `node -r dotenv/config scripts/runSchema.js dotenv_config_path=.env.prod`
+// sonra: `node -r dotenv/config scripts/runMigration008.js dotenv_config_path=.env.prod`
 require('dotenv').config();
 const { Pool } = require('pg');
 const fs = require('fs');
@@ -12,13 +12,9 @@ if (!conn) {
   process.exit(1);
 }
 
-const pool = new Pool({
-  connectionString: conn,
-  ssl: { rejectUnauthorized: false },
-});
-
-const sql = fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf8');
+const pool = new Pool({ connectionString: conn, ssl: { rejectUnauthorized: false } });
+const sql = fs.readFileSync(path.join(__dirname, '008_report_updates.sql'), 'utf8');
 
 pool.query(sql)
-  .then(() => { console.log('✓ Şema başarıyla kuruldu.'); process.exit(0); })
+  .then(() => { console.log('✓ Migration 008 tamamlandı.'); process.exit(0); })
   .catch(err => { console.error('✗ Hata:', err.message); process.exit(1); });
