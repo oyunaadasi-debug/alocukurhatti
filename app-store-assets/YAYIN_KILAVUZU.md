@@ -33,14 +33,13 @@ iOS'ta App Store'a çıkmanın **tek zorunlu ücretli adımı**.
 
 ## 2) Yasal sayfaları canlıya al (Claude yapabilir — onayın lazım)
 
-Apple **Privacy Policy URL** ve **Support URL** ister. Şu an:
+Apple **Privacy Policy URL** ve **Support URL** ister. Şu an (2026-05-31 deploy sonrası):
 - ✅ `/kvkk` (gizlilik) → CANLI
-- ❌ `/destek` → 404 (web yeniden deploy edilince düzelir)
-- ❌ `/kullanim-kosullari` → 404 (aynı)
+- ✅ `/destek` → CANLI
+- ✅ `/kullanim-kosullari` → CANLI
 
-- [ ] Web'i production'a deploy et → 3 sayfa da canlı olsun
-  - Claude'a "web'i deploy et" de (Vercel'e bağlı), ya da kendin: `cd web && npx vercel --prod`
-- [ ] Deploy sonrası şu 3 URL'in de açıldığını kontrol et:
+- [x] Web production'a deploy edildi → 3 sayfa da canlı (2026-05-31)
+- [x] Deploy sonrası şu 3 URL'in de açıldığı doğrulandı (hepsi 200):
   - https://web-ten-kappa-37.vercel.app/kvkk
   - https://web-ten-kappa-37.vercel.app/destek
   - https://web-ten-kappa-37.vercel.app/kullanim-kosullari
