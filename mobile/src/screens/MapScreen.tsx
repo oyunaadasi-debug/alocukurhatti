@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, StyleSheet, Alert, ScrollView, Platform } from 'react-native';
 import { Text } from '../components/AppText';
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -89,7 +89,7 @@ export default function MapScreen({ navigation, route }: any) {
       <MapView
         ref={mapRef}
         style={s.map}
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region}
         onPress={() => setSelected(null)}
         showsUserLocation
