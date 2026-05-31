@@ -17,6 +17,17 @@
 
 ---
 
+## ✅ 2026-05-31 İLERLEME (Claude, App Store Connect API key ile — 2FA'sız)
+- [x] Apple Developer hesabı aktif
+- [x] iOS açılış çökmesi düzeltildi (harita PROVIDER_GOOGLE → iOS Apple Haritalar)
+- [x] İmzalama: yeni dağıtım sertifikası + bundle ID kaydı + App Store provisioning profile (ASC API, headless)
+- [x] iOS production build EAS bulutunda alındı (build no 2, .ipa hazır)
+- [x] App Store Connect uygulama kaydı oluşturuldu → **ascAppId 6775084979**
+- [x] Binary `eas submit` ile yüklendi → Apple işliyor (TestFlight'ta görünecek)
+- [ ] KALAN (App Store Connect arayüzü): mağaza metinleri, ekran görüntüleri, App Privacy, "Submit for Review"
+
+---
+
 ## 1) ÖN KOŞUL — Apple Developer hesabı (SENİN YAPMAN GEREKEN) ⛔ EN KRİTİK
 
 iOS'ta App Store'a çıkmanın **tek zorunlu ücretli adımı**.
