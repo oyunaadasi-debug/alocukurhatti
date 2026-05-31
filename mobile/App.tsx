@@ -18,6 +18,7 @@ import {
 import { C } from './src/theme';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 
+import HomeScreen         from './src/screens/HomeScreen';
 import MapScreen          from './src/screens/MapScreen';
 import AddReportScreen    from './src/screens/AddReportScreen';
 import ReportDetailScreen from './src/screens/ReportDetailScreen';
@@ -42,6 +43,17 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login"    component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: true, ...headerOpts, title: 'Kayıt Ol' }} />
+    </Stack.Navigator>
+  );
+}
+
+// ── Ana Sayfa Stack ────────────────────────────────────────────
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={headerOpts}>
+      <Stack.Screen name="Home"         component={HomeScreen}         options={{ title: 'Alo Çukur Hattı 🕳️' }} />
+      <Stack.Screen name="AddReport"    component={AddReportScreen}    options={{ title: 'Çukur Bildir' }} />
+      <Stack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ title: 'Rapor Detayı' }} />
     </Stack.Navigator>
   );
 }
@@ -78,6 +90,7 @@ function ProfileStack() {
 }
 
 const TAB_ICONS: Record<string, [string, string]> = {
+  HomeTab:    ['home',   'home-outline'],
   MapTab:     ['map',    'map-outline'],
   StatsTab:   ['podium', 'podium-outline'],
   ProfileTab: ['person', 'person-outline'],
@@ -101,6 +114,7 @@ function MainApp() {
         tabBarBadgeStyle: { backgroundColor: C.primary, color: '#fff', fontSize: 10 },
       })}
     >
+      <Tab.Screen name="HomeTab"    component={HomeStack}        options={{ title: 'Ana Sayfa' }} />
       <Tab.Screen name="MapTab"     component={MapStack}         options={{ title: 'Harita' }} />
       <Tab.Screen name="StatsTab"   component={LeaderboardStack} options={{ title: 'Sıralama' }} />
       <Tab.Screen name="ProfileTab" component={ProfileStack}     options={{ title: 'Profil' }} />
