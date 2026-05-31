@@ -30,7 +30,8 @@
         "NSCameraUsageDescription": "Sorunun fotoğrafını çekmek için kamera iznine ihtiyacımız var.",
         "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "plugins": [
       "expo-location",

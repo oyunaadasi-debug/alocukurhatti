@@ -15,3 +15,10 @@ mobile/expo_qr.png
 
 # Pazarlama/lansman klasörü — kişisel veri (e-posta listesi, gönderim logu) içerir, kod reposuna girmez
 cukurhattilansman/
+
+# iOS imzalama secret'leri — ASLA commit edilmez
+mobile/credentials/
+mobile/credentials.json
+*.p12
+*.mobileprovision
+*.p8
