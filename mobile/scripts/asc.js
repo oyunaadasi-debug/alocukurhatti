@@ -135,6 +135,37 @@ if (require.main === module) {
       await setup();
       return;
     }
+    if (cmd === 'createapp') {
+      // bundle id record
+      const bids = await api('GET', '/v1/bundleIds?filter[identifier]=com.talha.alocukurhatti');
+      const bundleRecId = bids.body.data[0].id;
+      const payload = {
+        data: {
+          type: 'apps',
+          attributes: {
+            bundleId: 'com.talha.alocukurhatti',
+            name: 'Alo Çukur Hattı',
+            primaryLocale: 'tr',
+            sku: 'alocukurhatti',
+          },
+          relationships: {
+            bundleId: { data: { type: 'bundleIds', id: bundleRecId } },
+          },
+        },
+      };
+      const res = await api('POST', '/v1/apps', payload);
+      console.log('create app status:', res.status);
+      console.log(JSON.stringify(res.body, null, 2));
+      return;
+    }
+    if (cmd === 'listapps') {
+      const res = await api('GET', '/v1/apps?limit=50');
+      console.log('status:', res.status);
+      (res.body.data || []).forEach((a) =>
+        console.log('  -', a.id, a.attributes.bundleId, '|', a.attributes.name));
+      if (res.body.errors) console.log(JSON.stringify(res.body, null, 2));
+      return;
+    }
     if (cmd === 'test') {
       const certs = await api('GET', '/v1/certificates?limit=20');
       console.log('certificates status:', certs.status);
