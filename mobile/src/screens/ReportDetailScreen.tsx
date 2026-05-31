@@ -31,6 +31,7 @@ export default function ReportDetailScreen({ route }: any) {
   const [voting, setVoting]   = useState(false);
   const [voted, setVoted]     = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [flagged, setFlagged] = useState(false);
 
   useEffect(() => { fetch(); }, []);
 
@@ -57,6 +58,27 @@ export default function ReportDetailScreen({ route }: any) {
     } finally {
       setVoting(false);
     }
+  }
+
+  // Uygunsuz/sahte içerik bildir (App Store Guideline 1.2 — UGC moderasyonu)
+  async function flagContent() {
+    if (flagged) return;
+    Alert.alert(
+      'İçeriği bildir',
+      'Bu raporu uygunsuz, sahte veya rahatsız edici içerik olarak bildirmek istiyor musunuz? Yeterli bildirim alan içerik otomatik gizlenir ve moderasyon ekibimizce 24 saat içinde incelenir.',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { text: 'Bildir', style: 'destructive', onPress: async () => {
+          try {
+            await axios.post(`${API_URL}/reports/${reportId}/flag`);
+            setFlagged(true);
+            Alert.alert('Teşekkürler', 'Bildiriminiz alındı. İçerik moderasyon ekibimizce incelenecek.');
+          } catch {
+            Alert.alert('Hata', 'Bildirim gönderilemedi. Lütfen tekrar deneyin.');
+          }
+        } },
+      ],
+    );
   }
 
   // Vatandaş güncellemesi: hâlâ aynı / düzeldi (foto ile)
@@ -340,6 +362,17 @@ export default function ReportDetailScreen({ route }: any) {
             ))}
           </>
         )}
+        {/* Uygunsuz içerik bildir — UGC moderasyon (Apple 1.2) */}
+        <Divider />
+        <TouchableOpacity
+          style={s.flagBtn}
+          onPress={flagContent}
+          disabled={flagged}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={flagged ? 'flag' : 'flag-outline'} size={15} color={C.mute} />
+          <Text style={s.flagText}>{flagged ? 'İçerik bildirildi' : 'Uygunsuz içeriği bildir'}</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={{ height: S.xl3 }} />
@@ -436,4 +469,8 @@ const s = StyleSheet.create({
   resNote:  { fontSize: 13, color: C.body, marginBottom: S.sm },
   resPhoto: { width: '100%', height: 160, borderRadius: R.md, marginBottom: S.xs },
   resDate:  { fontSize: 11, color: C.mute },
+
+  // Uygunsuz içerik bildir — düşük vurgulu
+  flagBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.xs, paddingVertical: S.sm },
+  flagText: { fontSize: 12.5, color: C.mute, fontWeight: '600' },
 });
