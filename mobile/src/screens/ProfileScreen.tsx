@@ -117,6 +117,10 @@ export default function ProfileScreen({ navigation }: any) {
         >
           <Text style={s.loginBtnText}>Giriş Yap / Kayıt Ol</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('About')} style={s.guestAbout}>
+          <Ionicons name="information-circle-outline" size={16} color={C.primaryDim} />
+          <Text style={s.guestAboutText}>Uygulama nasıl çalışır?</Text>
+        </TouchableOpacity>
         <LegalLinks compact />
       </View>
     );
@@ -193,6 +197,17 @@ export default function ProfileScreen({ navigation }: any) {
         })
       )}
 
+      {/* Nasıl çalışır */}
+      <TouchableOpacity
+        style={[s.aboutRow, elevation(1)]}
+        onPress={() => navigation.navigate('About')}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="information-circle-outline" size={20} color={C.primaryDim} />
+        <Text style={s.aboutText}>Uygulama Nasıl Çalışır?</Text>
+        <Ionicons name="chevron-forward" size={18} color={C.mute} />
+      </TouchableOpacity>
+
       {/* Çıkış */}
       <TouchableOpacity
         style={[s.logoutBtn, loggingOut && { opacity: 0.6 }]}
@@ -262,6 +277,14 @@ const s = StyleSheet.create({
     marginTop: S.sm,
   },
   loginBtnText: { color: C.onPrimary, fontSize: 16, fontWeight: '700' },
+  guestAbout: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: S.sm },
+  guestAboutText: { fontSize: 14, color: C.primaryDim, fontWeight: '600' },
+
+  aboutRow: {
+    flexDirection: 'row', alignItems: 'center', gap: S.md,
+    backgroundColor: C.canvas, borderRadius: R.lg, padding: S.md,
+  },
+  aboutText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink },
 
   avatarSection: { alignItems: 'center', gap: S.sm, paddingVertical: S.lg },
   avatar: {

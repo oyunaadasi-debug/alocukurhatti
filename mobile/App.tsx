@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import {
   useFonts,
   PlusJakartaSans_200ExtraLight,
@@ -26,6 +27,11 @@ import LeaderboardScreen  from './src/screens/LeaderboardScreen';
 import ProfileScreen      from './src/screens/ProfileScreen';
 import LoginScreen        from './src/screens/LoginScreen';
 import RegisterScreen     from './src/screens/RegisterScreen';
+import AboutScreen        from './src/screens/AboutScreen';
+import OnboardingScreen   from './src/screens/OnboardingScreen';
+import { KeyboardDismissAccessory } from './src/components/KeyboardDismissAccessory';
+
+const ONBOARDING_KEY = 'onboarding_done';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -84,6 +90,7 @@ function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profilim' }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'Nasıl Çalışır?' }} />
       <Stack.Screen name="ReportDetail" component={ReportDetailScreen} options={{ title: 'Rapor Detayı' }} />
     </Stack.Navigator>
   );
@@ -159,7 +166,21 @@ export default function App() {
     PlusJakartaSans_800ExtraBold,
   });
 
-  if (!fontsLoaded) {
+  // İlk açılış mı? null = henüz okunmadı.
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    SecureStore.getItemAsync(ONBOARDING_KEY)
+      .then(v => setOnboardingDone(v === '1'))
+      .catch(() => setOnboardingDone(true)); // okunamazsa hikayeyi atla
+  }, []);
+
+  async function finishOnboarding() {
+    setOnboardingDone(true);
+    try { await SecureStore.setItemAsync(ONBOARDING_KEY, '1'); } catch {}
+  }
+
+  if (!fontsLoaded || onboardingDone === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.canvas }}>
         <ActivityIndicator size="large" color={C.primary} />
@@ -169,10 +190,15 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <RootNavigator />
-      </NavigationContainer>
+      <View style={{ flex: 1 }}>
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          {onboardingDone
+            ? <RootNavigator />
+            : <OnboardingScreen onDone={finishOnboarding} />}
+        </NavigationContainer>
+        <KeyboardDismissAccessory />
+      </View>
     </AuthProvider>
   );
 }
