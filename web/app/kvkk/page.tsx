@@ -29,6 +29,7 @@ export default function KvkkPage() {
           ['Konum bilgisi (enlem/boylam)', 'Şikayetin haritada doğru konuma işlenmesi'],
           ['Fotoğraf', 'Yol hasarının görsel olarak belgelenmesi ve moderasyon'],
           ['İsim (isteğe bağlı)', 'Şikayet sahibini haritada anonim şekilde göstermek'],
+          ['E-posta (kayıtlı kullanıcı)', 'Hesap oluşturma, giriş ve hesap yönetimi'],
           ['Açıklama metni (isteğe bağlı)', 'Hasarın niteliğini açıklamak'],
           ['Anonim IP özeti*', 'Spam ve tekrarlı bildirim önleme (tek yönlü hash)'],
         ]} />
@@ -58,6 +59,10 @@ export default function KvkkPage() {
           altyapısında barındırılmaktadır. Her iki hizmet de GDPR/KVKK kapsamında standart sözleşme
           hükümleriyle güvence altındadır.
         </p>
+        <p>
+          Güvenli içerik kontrolü etkin olduğunda yüklenen fotoğraflar, uygunsuz içeriği tespit etmek
+          amacıyla Google Cloud Vision SafeSearch hizmetine iletilebilir.
+        </p>
       </Section>
 
       <Section title="5. Veri Saklama Süreleri">
@@ -79,6 +84,10 @@ export default function KvkkPage() {
           <li>Verilerinin aktarıldığı üçüncü kişilere bildirilmesini talep etme</li>
           <li>Otomatik karar alma sistemlerine itiraz etme</li>
         </ul>
+        <p style={{ marginTop: 16 }}>
+          Kayıtlı kullanıcılar mobil uygulamada Profil → "Hesabımı Sil" seçeneğini kullanarak hesaplarını
+          ve hesaplarına bağlı kişisel verileri kalıcı olarak silebilir.
+        </p>
         <p style={{ marginTop: 16 }}>
           Haklarınızı kullanmak için <strong>oyunaadasi@gmail.com</strong> adresine
           e-posta gönderebilirsiniz. Talepleriniz en geç 30 gün içinde yanıtlanacaktır.

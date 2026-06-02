@@ -24,7 +24,7 @@ App Store Connect ve Google Play Console formlarına kopyala-yapıştır içerik
 - **Sürüm:** 1.0.0
 - **Kategori (öneri):** Apple → Utilities (veya Lifestyle); Play → Maps & Navigation (alt: House & Home / Social)
 - **Yaş sınırı:** 4+ / Everyone (kullanıcı içeriği moderasyonlu olduğundan 12+ de seçilebilir)
-- **Fiyat:** Ücretsiz (uygulama içi reklam — AdMob)
+- **Fiyat:** Ücretsiz
 
 ---
 
@@ -96,7 +96,7 @@ Toplanan veriler ve amaçları:
 | IP adresi | Hayır* | — | — |
 
 - *IP adresi geri döndürülemez şekilde özetlenir (SHA-256 hash); ham IP saklanmaz.
-- Reklam: AdMob (üçüncü taraf) cihaz tanımlayıcıları kullanabilir → reklam için "Veri toplanıyor" işaretlenmelidir.
+- Mevcut mobil sürümde reklam SDK'sı bulunmamaktadır. İleride reklam eklenirse App Privacy yanıtları güncellenmelidir.
 - Veri satışı: YOK. Üçüncü taraflarla paylaşım: yalnızca ilgili belediye/yol bakım kurumlarıyla rapor paylaşımı.
 
 ---
@@ -111,12 +111,12 @@ Toplanan veriler ve amaçları:
 
 ## Yayın Öncesi Kontrol Listesi
 
-- [ ] EAS projectId güncellendi (`mobile/app.json` → extra.eas.projectId — şu an placeholder)
-- [ ] icon.png / splash.png / adaptive-icon.png assets/ klasöründe mevcut
-- [ ] Ekran görüntüleri çekildi (iPhone 6.7"/6.5" + Android telefon)
-- [ ] Apple Developer hesabı aktif → `eas build -p ios --profile production` + `eas submit`
+- [x] EAS projectId güncellendi (`mobile/app.json` → extra.eas.projectId)
+- [x] icon.png / splash.png / adaptive-icon.png assets/ klasöründe mevcut
+- [ ] Ekran görüntüleri tamamlandı (`6.9-framed/` içinde 2 kullanılabilir + 1 yenilenecek taslak var)
+- [x] Apple Developer hesabı aktif → `eas build -p ios --profile production`
 - [ ] Google Play Console hesabı → `eas build -p android --profile production`
 - [ ] App Store Connect / Play Console listesi yukarıdaki metinlerle dolduruldu
-- [ ] Yasal URL'ler canlı doğrulandı (web Vercel deploy güncel)
-- [ ] AdMob reklam birimleri tanımlandıysa gizlilik bildirimi reklam verisini içeriyor
+- [x] Yasal URL'ler canlı doğrulandı (web Vercel deploy güncel)
+- [x] Mevcut sürümde AdMob SDK'sı olmadığı doğrulandı
 ```

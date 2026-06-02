@@ -94,7 +94,9 @@ Komut sırasıyla soracak:
 
 ## 5) Ekran görüntüleri (SEN sağlarsın) 📸
 
-Apple en az **6.7" iPhone** (1290×2796) ekran görüntüsü ister (3-10 adet).
+Apple **1-10 ekran görüntüsü** kabul eder. En pratik seçenek, güncel **6.9" iPhone**
+ölçülerinden birini kullanmaktır: 1260×2736, 1290×2796 veya 1320×2868 piksel
+(dikey). Mevcut `ekrangor/` görselleri 590×1280 olduğu için doğrudan yüklemeye uygun değildir.
 
 Sende iPhone yoksa en kolay yol:
 - [ ] Build bittikten sonra **TestFlight** ile herhangi bir iPhone'a yükle (arkadaş/aile telefonu olur)

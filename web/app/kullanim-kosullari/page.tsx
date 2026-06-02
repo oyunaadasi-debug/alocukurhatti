@@ -77,8 +77,8 @@ export default function TermsPage() {
 
       <Section title="7. Ücretlendirme">
         <p>
-          Platform tamamen <strong>ücretsizdir</strong>. Hizmet, uygulama içi reklamlarla (AdMob)
-          desteklenmektedir. Herhangi bir abonelik veya satın alma bulunmamaktadır.
+          Platform tamamen <strong>ücretsizdir</strong>. Herhangi bir abonelik veya uygulama içi
+          satın alma bulunmamaktadır.
         </p>
       </Section>
 

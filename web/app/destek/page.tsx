@@ -52,12 +52,12 @@ export default function SupportPage() {
           içerikler otomatik olarak gizlenir ve incelemeye alınır.
         </Faq>
         <Faq q="Hesabımı veya verilerimi nasıl silebilirim?">
-          oyunaadasi@gmail.com adresine talep gönderebilirsiniz. Talepleriniz KVKK kapsamında en geç
-          30 gün içinde yerine getirilir. Detaylar için <Link href="/kvkk" style={{ color: '#E53935' }}>KVKK Aydınlatma Metni</Link> sayfasına bakın.
+          Mobil uygulamada Profil → "Hesabımı Sil" seçeneğini kullanarak hesabınızı ve hesabınıza
+          bağlı kişisel verileri kalıcı olarak silebilirsiniz. Ek talepleriniz için oyunaadasi@gmail.com
+          adresine yazabilirsiniz. Detaylar için <Link href="/kvkk" style={{ color: '#E53935' }}>KVKK Aydınlatma Metni</Link> sayfasına bakın.
         </Faq>
         <Faq q="Uygulama ücretli mi?">
-          Hayır, tamamen ücretsizdir. Uygulama içi reklamlarla desteklenmektedir; herhangi bir abonelik
-          veya satın alma yoktur.
+          Hayır, tamamen ücretsizdir. Herhangi bir abonelik veya uygulama içi satın alma yoktur.
         </Faq>
       </Section>
 

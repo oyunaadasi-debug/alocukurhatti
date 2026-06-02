@@ -34,7 +34,10 @@
     "production": {
       "ios": {
         "ascAppId": "6775084979",
-        "appleTeamId": "JS9QMKM689"
+        "appleTeamId": "JS9QMKM689",
+        "ascApiKeyPath": "C:/Users/talha/Downloads/AuthKey_9U322UJMRN.p8",
+        "ascApiKeyId": "9U322UJMRN",
+        "ascApiKeyIssuerId": "4500e104-1d88-4abd-91b5-53986c0e3e17"
       }
     }
   }

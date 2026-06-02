@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, ScrollView, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
-import { API_URL } from '../config';
+import { API_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../config';
 
 type MyReport = {
   id: number; address: string; city: string; district: string;
@@ -21,6 +21,32 @@ const ROLE_LABEL: Record<string, string> = {
   municipality: '🏛 Belediye Memuru',
   admin:        '⚙️ Admin',
 };
+
+function LegalLinks({ compact = false }: { compact?: boolean }) {
+  async function open(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Bağlantı açılamadı', 'Lütfen daha sonra tekrar deneyin.');
+    }
+  }
+
+  return (
+    <View style={[s.legalLinks, compact && s.legalLinksCompact]}>
+      <TouchableOpacity onPress={() => open(PRIVACY_URL)}>
+        <Text style={s.legalLink}>Gizlilik Politikası</Text>
+      </TouchableOpacity>
+      <Text style={s.legalDot}>·</Text>
+      <TouchableOpacity onPress={() => open(TERMS_URL)}>
+        <Text style={s.legalLink}>Kullanım Koşulları</Text>
+      </TouchableOpacity>
+      <Text style={s.legalDot}>·</Text>
+      <TouchableOpacity onPress={() => open(SUPPORT_URL)}>
+        <Text style={s.legalLink}>Destek</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
@@ -91,6 +117,7 @@ export default function ProfileScreen({ navigation }: any) {
         >
           <Text style={s.loginBtnText}>Giriş Yap / Kayıt Ol</Text>
         </TouchableOpacity>
+        <LegalLinks compact />
       </View>
     );
   }
@@ -199,6 +226,7 @@ export default function ProfileScreen({ navigation }: any) {
       </TouchableOpacity>
       <Text style={s.deleteHint}>Hesabın ve kişisel verilerin kalıcı olarak silinir.</Text>
 
+      <LegalLinks />
       <Text style={s.version}>Alo Çukur Hattı v1.0.0</Text>
     </ScrollView>
   );
@@ -303,6 +331,14 @@ const s = StyleSheet.create({
   },
   deleteText: { fontSize: 14, fontWeight: '700', color: C.error },
   deleteHint: { textAlign: 'center', fontSize: 11, color: C.mute, marginTop: -4 },
+
+  legalLinks: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+    alignItems: 'center', gap: 7, paddingHorizontal: S.sm,
+  },
+  legalLinksCompact: { marginTop: S.lg },
+  legalLink: { fontSize: 12, color: C.primaryDim, fontWeight: '600' },
+  legalDot: { fontSize: 12, color: C.mute },
 
   version: { textAlign: 'center', fontSize: 12, color: C.mute, marginTop: S.sm },
 });
