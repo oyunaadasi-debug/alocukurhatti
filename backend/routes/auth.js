@@ -101,4 +101,35 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// DELETE /api/auth/account — kullanıcı kendi hesabını kalıcı siler (Apple 5.1.1(v))
+router.delete('/account', async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Token gerekli.' });
+
+  let userId;
+  try {
+    userId = jwt.verify(header.slice(7), process.env.JWT_SECRET).id;
+  } catch {
+    return res.status(401).json({ error: 'Geçersiz token.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // resolutions.resolved_by'da ON DELETE kuralı yok → silmeden önce boşalt.
+    await client.query('UPDATE resolutions SET resolved_by = NULL WHERE resolved_by = $1', [userId]);
+    // users silinince: raporlar/me_too anonimleşir (SET NULL), push_token/bildirim silinir (CASCADE).
+    const { rowCount } = await client.query('DELETE FROM users WHERE id = $1', [userId]);
+    await client.query('COMMIT');
+    if (!rowCount) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Hesap silme hatası:', err);
+    res.status(500).json({ error: 'Hesap silinemedi.' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

@@ -25,6 +25,7 @@ const ROLE_LABEL: Record<string, string> = {
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [myReports, setMyReports] = useState<MyReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
 
@@ -53,6 +54,29 @@ export default function ProfileScreen({ navigation }: any) {
         },
       },
     ]);
+  }
+
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Hesabımı Sil',
+      'Hesabın ve sana ait kişisel bilgiler kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Hesabımı Sil', style: 'destructive', onPress: async () => {
+            setDeleting(true);
+            try {
+              await axios.delete(`${API_URL}/auth/account`);
+              await logout();
+              Alert.alert('Hesap silindi', 'Hesabın kalıcı olarak silindi.');
+            } catch {
+              setDeleting(false);
+              Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (!user) {
@@ -158,6 +182,23 @@ export default function ProfileScreen({ navigation }: any) {
         }
       </TouchableOpacity>
 
+      {/* Hesabı sil — Apple 5.1.1(v) zorunlu */}
+      <TouchableOpacity
+        style={[s.deleteBtn, deleting && { opacity: 0.6 }]}
+        onPress={handleDeleteAccount}
+        disabled={deleting || loggingOut}
+        activeOpacity={0.8}
+      >
+        {deleting
+          ? <ActivityIndicator color={C.error} />
+          : <>
+              <Ionicons name="trash-outline" size={18} color={C.error} />
+              <Text style={s.deleteText}>Hesabımı Sil</Text>
+            </>
+        }
+      </TouchableOpacity>
+      <Text style={s.deleteHint}>Hesabın ve kişisel verilerin kalıcı olarak silinir.</Text>
+
       <Text style={s.version}>Alo Çukur Hattı v1.0.0</Text>
     </ScrollView>
   );
@@ -255,6 +296,13 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: C.error,
   },
   logoutText: { fontSize: 15, fontWeight: '700', color: C.error },
+
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, height: 44, marginTop: S.xs,
+  },
+  deleteText: { fontSize: 14, fontWeight: '700', color: C.error },
+  deleteHint: { textAlign: 'center', fontSize: 11, color: C.mute, marginTop: -4 },
 
   version: { textAlign: 'center', fontSize: 12, color: C.mute, marginTop: S.sm },
 });
