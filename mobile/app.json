@@ -31,7 +31,7 @@
         "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "9"
+      "buildNumber": "10"
     },
     "plugins": [
       "expo-location",
