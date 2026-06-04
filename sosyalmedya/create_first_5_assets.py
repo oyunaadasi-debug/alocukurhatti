@@ -9,12 +9,23 @@ Alo Çukur Hattı - İlk 5 sosyal medya içeriği görsel üretici.
 - X paylaşım kartı: 1600x900
 """
 from pathlib import Path
+import shutil
+import subprocess
 from playwright.sync_api import sync_playwright
 
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "ready_content" / "ilk_5"
 TMP = BASE / "_tmp_first_5.html"
-CAROUSEL_BG = BASE / "moneyprinter_pexels_reels" / "outputs" / "reels_01_pexels_lansman_contact.jpg"
+PEXELS_ASSETS = BASE / "moneyprinter_pexels_reels" / "assets"
+BG_DIR = OUT / "_shared" / "carousel_backgrounds"
+CAROUSEL_BG_SOURCES = {
+    "cover": PEXELS_ASSETS / "02_profesyonel_30_saniye" / "pexels_02_34218230.mp4",
+    "photo": PEXELS_ASSETS / "02_profesyonel_30_saniye" / "pexels_03_35988850.mp4",
+    "location": PEXELS_ASSETS / "02_profesyonel_30_saniye" / "pexels_04_4546864.mp4",
+    "follow": PEXELS_ASSETS / "02_profesyonel_30_saniye" / "pexels_05_855956.mp4",
+    "cta": PEXELS_ASSETS / "01_profesyonel_lansman" / "pexels_05_6082942.mp4",
+}
+CAROUSEL_BG_FALLBACK = BASE / "moneyprinter_pexels_reels" / "outputs" / "reels_01_pexels_lansman_contact.jpg"
 
 PALETTE = {
     "canvas": "#FBF9F4",
@@ -32,6 +43,43 @@ PALETTE = {
     "warning": "#E0A23B",
     "white": "#FFFFFF",
 }
+
+
+def ensure_carousel_backgrounds():
+    BG_DIR.mkdir(parents=True, exist_ok=True)
+    ffmpeg = shutil.which("ffmpeg")
+    generated = {}
+    for key, source in CAROUSEL_BG_SOURCES.items():
+        target = BG_DIR / f"{key}.jpg"
+        generated[key] = target
+        if target.exists():
+            continue
+        if not ffmpeg or not source.exists():
+            if CAROUSEL_BG_FALLBACK.exists():
+                shutil.copy2(CAROUSEL_BG_FALLBACK, target)
+            continue
+        subprocess.run(
+            [
+                ffmpeg,
+                "-y",
+                "-ss",
+                "00:00:02",
+                "-i",
+                str(source),
+                "-frames:v",
+                "1",
+                "-update",
+                "1",
+                str(target),
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    return generated
+
+
+CAROUSEL_BGS = {}
 
 
 def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurhatti", size="vertical", bg_image=""):
@@ -63,8 +111,8 @@ def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurh
     sub = "#D8D2C6" if dark else PALETTE["body"]
     card = "rgba(255,255,255,0.08)" if dark else "rgba(255,255,255,0.55)"
     border = "rgba(255,255,255,0.16)" if dark else "rgba(27,26,22,0.08)"
-    photo_opacity = 0.22 if dark else 0.18
-    photo_overlay = "rgba(8,20,17,0.48)" if dark else "rgba(251,249,244,0.76)"
+    photo_opacity = 0.24 if dark else 0.28
+    photo_overlay = "rgba(8,20,17,0.46)" if dark else "rgba(251,249,244,0.66)"
     photo_bg = (
         f"""
           .photo-bg {{
@@ -263,8 +311,9 @@ def vertical(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=
     render(page, html, OUT / folder / name, 1080, 1920)
 
 
-def square(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=False):
-    bg_image = CAROUSEL_BG.resolve().as_uri() if CAROUSEL_BG.exists() else ""
+def square(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=False, bg_key="cover"):
+    bg_path = CAROUSEL_BGS.get(bg_key) or CAROUSEL_BGS.get("cover")
+    bg_image = bg_path.resolve().as_uri() if bg_path and bg_path.exists() else ""
     html = shell(title, eyebrow, body, cta, icon, dark, size="square", bg_image=bg_image)
     render(page, html, OUT / folder / name, 1080, 1080)
 
@@ -275,7 +324,9 @@ def wide(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=Fals
 
 
 def main():
+    global CAROUSEL_BGS
     OUT.mkdir(parents=True, exist_ok=True)
+    CAROUSEL_BGS = ensure_carousel_backgrounds()
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -289,11 +340,11 @@ def main():
         vertical(page, "01_reels_lansman", "storyboard_05.png", "Bugün ilk raporunu<br><span>bildir</span>", "CTA", "Ücretsiz kullan. Anonim bildirim yapabilirsin.", "Hemen indir", "phone", True)
 
         # 2. Gün - Carousel
-        square(page, "02_carousel_3_adim", "slide_01.png", "3 adımda<br><span>yol hasarı bildir</span>", "REHBER", "Fotoğraf çek. Konumu işaretle. Haritada görünür yap.", "Kaydır", "pin", True)
-        square(page, "02_carousel_3_adim", "slide_02.png", "1. Fotoğraf çek", "ADIM 1", "Çukurun veya yol hasarının net göründüğü bir fotoğraf ekle.", "", "camera")
-        square(page, "02_carousel_3_adim", "slide_03.png", "2. Konumu işaretle", "ADIM 2", "Uygulama konumunu otomatik alır. İstersen haritadan manuel düzeltebilirsin.", "", "map")
-        square(page, "02_carousel_3_adim", "slide_04.png", "3. Gönder ve<br><span>takip et</span>", "ADIM 3", "Rapor haritada görünür olur. Aynı sorunu görenler Ben de Gördüm diyebilir.", "", "bell")
-        square(page, "02_carousel_3_adim", "slide_05.png", "İlk pin<br><span>senden gelsin</span>", "CTA", "Alo Çukur Hattı ücretsiz bir vatandaş uygulamasıdır.", "Ücretsiz indir", "phone", True)
+        square(page, "02_carousel_3_adim", "slide_01.png", "3 adımda<br><span>yol hasarı bildir</span>", "REHBER", "Fotoğraf çek. Konumu işaretle. Haritada görünür yap.", "Kaydır", "pin", True, "cover")
+        square(page, "02_carousel_3_adim", "slide_02.png", "1. Fotoğraf çek", "ADIM 1", "Çukurun veya yol hasarının net göründüğü bir fotoğraf ekle.", "", "camera", False, "photo")
+        square(page, "02_carousel_3_adim", "slide_03.png", "2. Konumu işaretle", "ADIM 2", "Uygulama konumunu otomatik alır. İstersen haritadan manuel düzeltebilirsin.", "", "map", False, "location")
+        square(page, "02_carousel_3_adim", "slide_04.png", "3. Gönder ve<br><span>takip et</span>", "ADIM 3", "Rapor haritada görünür olur. Aynı sorunu görenler Ben de Gördüm diyebilir.", "", "bell", False, "follow")
+        square(page, "02_carousel_3_adim", "slide_05.png", "İlk pin<br><span>senden gelsin</span>", "CTA", "Alo Çukur Hattı ücretsiz bir vatandaş uygulamasıdır.", "Ücretsiz indir", "phone", True, "cta")
 
         # 3. Gün - Story anket serisi
         vertical(page, "03_story_anket", "story_01.png", "Mahallende<br><span>yol hasarı var mı?</span>", "ANKET", "Var / Yok gibi", "Cevapla", "warning")
