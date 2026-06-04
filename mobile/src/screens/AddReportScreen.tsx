@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, TextInput, ScrollView, TouchableOpacity,
   Image, StyleSheet, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -83,13 +83,45 @@ export default function AddReportScreen({ route, navigation }: any) {
   }
 
   async function openCamera() {
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
-    if (!r.canceled) setPhoto(r.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Kamera İzni Gerekli',
+          'Fotoğraf çekmek için ayarlardan kamera iznini açın.',
+          [
+            { text: 'Ayarlar', onPress: () => Linking.openSettings() },
+            { text: 'İptal', style: 'cancel' },
+          ],
+        );
+        return;
+      }
+      const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+      if (!r.canceled) setPhoto(r.assets[0].uri);
+    } catch (e) {
+      Alert.alert('Hata', 'Kamera açılamadı. Lütfen tekrar deneyin.');
+    }
   }
 
   async function openGallery() {
-    const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
-    if (!r.canceled) setPhoto(r.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Galeri İzni Gerekli',
+          'Fotoğraf seçmek için ayarlardan galeri iznini açın.',
+          [
+            { text: 'Ayarlar', onPress: () => Linking.openSettings() },
+            { text: 'İptal', style: 'cancel' },
+          ],
+        );
+        return;
+      }
+      const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      if (!r.canceled) setPhoto(r.assets[0].uri);
+    } catch (e) {
+      Alert.alert('Hata', 'Galeri açılamadı. Lütfen tekrar deneyin.');
+    }
   }
 
   async function submit() {

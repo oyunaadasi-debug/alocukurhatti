@@ -114,12 +114,44 @@ export default function ReportDetailScreen({ route }: any) {
     Alert.alert('Düzelmiş mi?', 'Düzeldiğini kanıtlamak için bir fotoğraf ekleyin.', [
       { text: 'İptal', style: 'cancel' },
       { text: 'Kamera', onPress: async () => {
-        const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
-        if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+        try {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert(
+              'Kamera İzni Gerekli',
+              'Fotoğraf çekmek için ayarlardan kamera iznini açın.',
+              [
+                { text: 'Ayarlar', onPress: () => Linking.openSettings() },
+                { text: 'İptal', style: 'cancel' },
+              ],
+            );
+            return;
+          }
+          const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+          if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+        } catch (e) {
+          Alert.alert('Hata', 'Kamera açılamadı. Lütfen tekrar deneyin.');
+        }
       } },
       { text: 'Galeri', onPress: async () => {
-        const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
-        if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+        try {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert(
+              'Galeri İzni Gerekli',
+              'Fotoğraf seçmek için ayarlardan galeri iznini açın.',
+              [
+                { text: 'Ayarlar', onPress: () => Linking.openSettings() },
+                { text: 'İptal', style: 'cancel' },
+              ],
+            );
+            return;
+          }
+          const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+          if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
+        } catch (e) {
+          Alert.alert('Hata', 'Galeri açılamadı. Lütfen tekrar deneyin.');
+        }
       } },
     ]);
   }
