@@ -10,6 +10,17 @@ Yeni ana strateji `sosyal_medya_plani_2026.md` dosyasındadır. Eski carousel se
 
 ---
 
+## Güncel Üretim Kararı
+
+- Reels/TikTok ana formatı artık **MoneyPrinter + Pexels stok video + Türkçe seslendirme + Alo Çukur Hattı marka katmanı** olacak.
+- Önceden yazılmış veya paylaşılacak tüm Reels fikirleri carousel/storyboard görsellerinden video yapılmayacak; önce Pexels'ten konuya yakın gerçek görüntüler bulunacak, sonra bu profesyonel formata dönüştürülecek.
+- Pexels aramalarında öncelik: yol çukuru, bozuk asfalt, çatlak zemin, asfalt onarımı, trafik, telefon/harita kullanımı ve şehir yolu sahneleri.
+- Carousel görsellerinde düz arka plan tek başına kullanılmayacak. Okunabilirliği bozmayan düşük opaklıklı yol/şehir görsel katmanı, yumuşak renk filtresi ve marka CTA yapısı korunacak.
+
+Güncel profesyonel Reels örnekleri: `moneyprinter_pexels_reels/outputs/`
+
+---
+
 ## 📁 Klasör Yapısı
 
 ```text

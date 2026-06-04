@@ -14,6 +14,7 @@ from playwright.sync_api import sync_playwright
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "ready_content" / "ilk_5"
 TMP = BASE / "_tmp_first_5.html"
+CAROUSEL_BG = BASE / "moneyprinter_pexels_reels" / "outputs" / "reels_01_pexels_lansman_contact.jpg"
 
 PALETTE = {
     "canvas": "#FBF9F4",
@@ -33,7 +34,7 @@ PALETTE = {
 }
 
 
-def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurhatti", size="vertical"):
+def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurhatti", size="vertical", bg_image=""):
     if size == "square":
         width, height = 1080, 1080
         pad = 76
@@ -62,6 +63,35 @@ def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurh
     sub = "#D8D2C6" if dark else PALETTE["body"]
     card = "rgba(255,255,255,0.08)" if dark else "rgba(255,255,255,0.55)"
     border = "rgba(255,255,255,0.16)" if dark else "rgba(27,26,22,0.08)"
+    photo_opacity = 0.22 if dark else 0.18
+    photo_overlay = "rgba(8,20,17,0.48)" if dark else "rgba(251,249,244,0.76)"
+    photo_bg = (
+        f"""
+          .photo-bg {{
+            position: absolute;
+            inset: 0;
+            background-image:
+              linear-gradient(160deg, {photo_overlay}, {photo_overlay}),
+              url("{bg_image}");
+            background-size: cover;
+            background-position: center;
+            opacity: {photo_opacity};
+            filter: saturate(0.82) contrast(1.08);
+            transform: scale(1.04);
+          }}
+          .photo-sheen {{
+            position: absolute;
+            inset: 0;
+            background:
+              linear-gradient(120deg, transparent 0 46%, rgba(31,169,139,0.14) 46% 50%, transparent 50% 100%),
+              radial-gradient(circle at 16% 18%, rgba(31,169,139,0.18), transparent 28%),
+              radial-gradient(circle at 86% 80%, rgba(231,111,79,0.12), transparent 30%);
+          }}
+        """
+        if bg_image
+        else ""
+    )
+    photo_html = '<div class="photo-bg"></div><div class="photo-sheen"></div>' if bg_image else ""
 
     return f"""
     <html>
@@ -93,6 +123,7 @@ def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurh
             background-size: 52px 52px;
             opacity: {0.45 if dark else 0.23};
           }}
+          {photo_bg}
           .badge {{
             position: relative;
             z-index: 2;
@@ -189,6 +220,7 @@ def shell(title, eyebrow, body, cta="", icon="pin", dark=False, meta="@alocukurh
       <body>
         <div class="frame">
           <div class="grid"></div>
+          {photo_html}
           <div class="badge">{eyebrow}</div>
           <div class="center">
             <div class="icon">{icon_svg(icon)}</div>
@@ -232,7 +264,8 @@ def vertical(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=
 
 
 def square(page, folder, name, title, eyebrow, body, cta="", icon="pin", dark=False):
-    html = shell(title, eyebrow, body, cta, icon, dark, size="square")
+    bg_image = CAROUSEL_BG.resolve().as_uri() if CAROUSEL_BG.exists() else ""
+    html = shell(title, eyebrow, body, cta, icon, dark, size="square", bg_image=bg_image)
     render(page, html, OUT / folder / name, 1080, 1080)
 
 
