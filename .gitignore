@@ -5,6 +5,7 @@ node_modules/
 .expo/
 android/
 ios/
+web/.next/
 
 # Build artifacts / TypeScript cache
 *.tsbuildinfo

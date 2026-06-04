@@ -90,3 +90,19 @@ export const statusLabel = (status: string) => {
     default:          return 'Açık';
   }
 };
+
+export const severityColor = (severity?: string) => {
+  switch (severity) {
+    case 'dangerous': return { bg: '#F8D8CC', text: C.error };
+    case 'small':     return { bg: C.canvasSofter, text: C.body };
+    default:          return { bg: C.primaryContainer, text: C.primaryDim };
+  }
+};
+
+export const severityLabel = (severity?: string) => {
+  switch (severity) {
+    case 'dangerous': return 'Tehlikeli';
+    case 'small':     return 'Küçük';
+    default:          return 'Orta';
+  }
+};

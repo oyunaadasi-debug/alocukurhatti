@@ -12,19 +12,25 @@ import { API_URL } from '../config';
 
 type City = {
   city: string; open_count: string; resolved_count: string;
-  total_count: string; total_metoo: string;
+  total_count: string; total_metoo: string; last_7_days?: string; avg_resolution_hours?: string | null;
 };
 type District = {
   district: string; open_count: string; resolved_count: string;
-  total_count: string; total_metoo: string; center_lat: string; center_lng: string;
+  total_count: string; total_metoo: string; last_7_days?: string; avg_resolution_hours?: string | null; center_lat: string; center_lng: string;
 };
 type Reporter = {
   id: number; display_name: string; report_count: string;
   total_metoo: string; resolved_count: string;
 };
 
-type Tab = 'cities' | 'reporters';
+type Tab = 'open' | 'fastest' | 'supported' | 'reporters';
 const MEDALS = ['🥇', '🥈', '🥉'];
+const TAB_META: Record<Tab, { label: string; subtitle: string; sort?: string }> = {
+  open:      { label: 'Açık Sorun', subtitle: 'En fazla açık raporu olan iller', sort: 'open' },
+  fastest:   { label: 'Hızlı Çözüm', subtitle: 'Çözüme en hızlı ulaşan şehirler', sort: 'fastest' },
+  supported: { label: 'En Çok Destek', subtitle: 'En çok “Ben de gördüm” alan şehirler', sort: 'supported' },
+  reporters: { label: 'Vatandaşlar', subtitle: 'En çok rapor eden duyarlı vatandaşlar' },
+};
 
 function resolveRate(r: { resolved_count: string; total_count: string }) {
   const t = parseInt(r.total_count);
@@ -32,7 +38,7 @@ function resolveRate(r: { resolved_count: string; total_count: string }) {
 }
 
 export default function LeaderboardScreen({ navigation }: any) {
-  const [tab, setTab]                 = useState<Tab>('cities');
+  const [tab, setTab]                 = useState<Tab>('open');
   const [cities, setCities]           = useState<City[]>([]);
   const [reporters, setReporters]     = useState<Reporter[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -46,8 +52,8 @@ export default function LeaderboardScreen({ navigation }: any) {
   async function load() {
     setLoading(true);
     try {
-      if (tab === 'cities') {
-        const { data } = await axios.get(`${API_URL}/stats/cities`);
+      if (tab !== 'reporters') {
+        const { data } = await axios.get(`${API_URL}/stats/cities`, { params: { sort: TAB_META[tab].sort } });
         setCities(data.cities);
       } else {
         const { data } = await axios.get(`${API_URL}/stats/reporters`);
@@ -82,6 +88,13 @@ export default function LeaderboardScreen({ navigation }: any) {
     const open    = parseInt(item.open_count);
     const rate    = resolveRate(item);
     const isOpen  = expandedCity === item.city;
+    const avgHours = item.avg_resolution_hours ? Math.round(parseFloat(item.avg_resolution_hours)) : null;
+    const leadNum = tab === 'supported'
+      ? parseInt(item.total_metoo || '0')
+      : tab === 'fastest'
+        ? (avgHours ?? '-')
+        : open;
+    const leadLabel = tab === 'supported' ? 'destek' : tab === 'fastest' ? 'saat' : 'açık';
 
     return (
       <View style={[s.cityCard, elevation(2)]}>
@@ -99,14 +112,14 @@ export default function LeaderboardScreen({ navigation }: any) {
               <View style={[s.barFill, { width: `${Math.min(rate, 100)}%` }]} />
             </View>
             <Text style={s.cityMeta}>
-              {item.total_count} rapor · %{rate} çözüldü · {item.total_metoo} görmüş
+              {item.total_count} rapor · %{rate} çözüldü · {item.total_metoo} görmüş · son 7 gün {item.last_7_days || 0}
             </Text>
           </View>
 
           {/* Açık sayısı */}
           <View style={s.openBox}>
-            <Text style={s.openNum}>{open}</Text>
-            <Text style={s.openLbl}>açık</Text>
+            <Text style={s.openNum}>{leadNum}</Text>
+            <Text style={s.openLbl}>{leadLabel}</Text>
           </View>
 
           {/* Harita chip */}
@@ -132,7 +145,7 @@ export default function LeaderboardScreen({ navigation }: any) {
                   <TouchableOpacity key={i} style={s.distRow} onPress={() => goMap(item.city, d)}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.distName}>{d.district}</Text>
-                      <Text style={s.distMeta}>{d.total_metoo} görmüş · %{resolveRate(d)} çözüldü</Text>
+                      <Text style={s.distMeta}>{d.total_metoo} görmüş · %{resolveRate(d)} çözüldü · son 7 gün {d.last_7_days || 0}</Text>
                     </View>
                     <Text style={s.distCount}>{d.open_count}</Text>
                     <Ionicons name="map-outline" size={16} color={C.secondary} style={{ marginLeft: S.xs }} />
@@ -181,31 +194,45 @@ export default function LeaderboardScreen({ navigation }: any) {
       <View style={s.header}>
         <Text style={s.headerTitle}>🏆 Lider Tablosu</Text>
         <Text style={s.headerSub}>
-          {tab === 'cities' ? 'En fazla açık raporu olan iller' : 'En çok rapor eden duyarlı vatandaşlar'}
+          {TAB_META[tab].subtitle}
         </Text>
 
         {/* Sekme seçici */}
         <View style={s.tabBar}>
           <TouchableOpacity
-            style={[s.tab, tab === 'cities' && s.tabActive]}
-            onPress={() => setTab('cities')}
+            style={[s.tab, tab === 'open' && s.tabActive]}
+            onPress={() => setTab('open')}
             activeOpacity={0.8}
           >
-            <Text style={[s.tabText, tab === 'cities' && s.tabTextActive]}>İller</Text>
+            <Text style={[s.tabText, tab === 'open' && s.tabTextActive]}>Açık</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.tab, tab === 'fastest' && s.tabActive]}
+            onPress={() => setTab('fastest')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.tabText, tab === 'fastest' && s.tabTextActive]}>Hızlı</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.tab, tab === 'supported' && s.tabActive]}
+            onPress={() => setTab('supported')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.tabText, tab === 'supported' && s.tabTextActive]}>Destek</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.tab, tab === 'reporters' && s.tabActive]}
             onPress={() => setTab('reporters')}
             activeOpacity={0.8}
           >
-            <Text style={[s.tabText, tab === 'reporters' && s.tabTextActive]}>Duyarlı Vatandaşlar</Text>
+            <Text style={[s.tabText, tab === 'reporters' && s.tabTextActive]}>Vatandaş</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {loading ? (
         <View style={s.center}><ActivityIndicator size="large" color={C.primary} /></View>
-      ) : tab === 'cities' ? (
+      ) : tab !== 'reporters' ? (
         <FlatList
           data={cities}
           keyExtractor={i => i.city}

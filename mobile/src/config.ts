@@ -1,4 +1,5 @@
 export const API_URL = 'https://backend-mu-seven-26.vercel.app/api';
+export const WEB_URL = 'https://web-ten-kappa-37.vercel.app';
 export const PRIVACY_URL = 'https://web-ten-kappa-37.vercel.app/kvkk';
 export const TERMS_URL = 'https://web-ten-kappa-37.vercel.app/kullanim-kosullari';
 export const SUPPORT_URL = 'https://web-ten-kappa-37.vercel.app/destek';

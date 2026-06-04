@@ -8,9 +8,10 @@ import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { C, R, S, elevation } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { C, R, S, elevation, severityColor, severityLabel } from '../theme';
 import { StatusBadge, MetaRow, SectionTitle, Divider } from '../components/ui';
-import { API_URL } from '../config';
+import { API_URL, WEB_URL } from '../config';
 import { belediyeFor, buildComplaintText, issueLabel, issueIcon, CIMER_URL, ALO_153 } from '../data/belediyeler';
 
 // İki tarih arası süreyi Türkçe metne çevir (çözüm süresi için)
@@ -24,14 +25,17 @@ function durationText(fromIso: string, toIso: string): string {
   return `${Math.max(1, Math.floor(ms / 60000))} dakika`;
 }
 
-export default function ReportDetailScreen({ route }: any) {
+export default function ReportDetailScreen({ route, navigation }: any) {
   const { reportId } = route.params;
+  const { user } = useAuth();
   const [report, setReport]   = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting]   = useState(false);
   const [voted, setVoted]     = useState(false);
   const [updating, setUpdating] = useState(false);
   const [flagged, setFlagged] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   useEffect(() => { fetch(); }, []);
 
@@ -39,6 +43,7 @@ export default function ReportDetailScreen({ route }: any) {
     try {
       const { data } = await axios.get(`${API_URL}/reports/${reportId}`);
       setReport(data);
+      setFollowing(Boolean(data.is_followed));
     } catch {
       Alert.alert('Hata', 'Rapor yüklenemedi.');
     } finally {
@@ -57,6 +62,30 @@ export default function ReportDetailScreen({ route }: any) {
       Alert.alert('Hata', 'Oyunuz kaydedilemedi.');
     } finally {
       setVoting(false);
+    }
+  }
+
+  async function toggleFollow() {
+    if (!user) {
+      Alert.alert('Giriş Yapın', 'Raporları takip etmek ve bildirim almak için giriş yapmanız gerekiyor.', [
+        { text: 'Vazgeç', style: 'cancel' },
+        { text: 'Giriş Yap', onPress: () => navigation.navigate('Auth') },
+      ]);
+      return;
+    }
+    setFollowBusy(true);
+    try {
+      if (following) {
+        await axios.delete(`${API_URL}/reports/${reportId}/follow`);
+        setFollowing(false);
+      } else {
+        await axios.post(`${API_URL}/reports/${reportId}/follow`);
+        setFollowing(true);
+      }
+    } catch {
+      Alert.alert('Hata', 'Takip tercihi kaydedilemedi.');
+    } finally {
+      setFollowBusy(false);
     }
   }
 
@@ -158,9 +187,16 @@ export default function ReportDetailScreen({ route }: any) {
 
   const complaintText = report ? buildComplaintText(report) : '';
   const bld = report ? belediyeFor(report.city) : undefined;
+  const reportUrl = `${WEB_URL}/reports/${reportId}`;
+  const publicShareText = report
+    ? `Alo Çukur Hattı: ${[report.address, report.district, report.city].filter(Boolean).join(', ') || 'Yol hasarı'} için ${issueLabel(report.issue_type).toLowerCase()} bildirimi. ${report.me_too_count} kişi de gördü. ${reportUrl}`
+    : reportUrl;
 
   async function onShare() {
     try { await Share.share({ message: complaintText }); } catch {}
+  }
+  async function onSocialShare() {
+    try { await Share.share({ message: publicShareText, url: reportUrl }); } catch {}
   }
   async function onCopy() {
     await Clipboard.setStringAsync(complaintText);
@@ -201,9 +237,20 @@ export default function ReportDetailScreen({ route }: any) {
 
       <View style={s.body}>
         {/* Sorun türü */}
-        <View style={s.typeChip}>
-          <Ionicons name={issueIcon(report.issue_type) as any} size={14} color={C.attention} />
-          <Text style={s.typeChipText}>{issueLabel(report.issue_type)}</Text>
+        <View style={s.chipRow}>
+          <View style={s.typeChip}>
+            <Ionicons name={issueIcon(report.issue_type) as any} size={14} color={C.attention} />
+            <Text style={s.typeChipText}>{issueLabel(report.issue_type)}</Text>
+          </View>
+          {(() => {
+            const sc = severityColor(report.severity);
+            return (
+              <View style={[s.typeChip, { backgroundColor: sc.bg, borderColor: sc.bg }]}>
+                <Ionicons name={report.severity === 'dangerous' ? 'warning-outline' : 'trail-sign-outline'} size={14} color={sc.text} />
+                <Text style={[s.typeChipText, { color: sc.text }]}>{severityLabel(report.severity)}</Text>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Çözüm süresi — geçmişe dönük: ne kadar sürede yapıldı */}
@@ -234,6 +281,24 @@ export default function ReportDetailScreen({ route }: any) {
           icon={<Ionicons name="person-outline" size={16} color={C.body} />}
           text={report.reporter_name || 'Anonim vatandaş'}
         />
+
+        <TouchableOpacity
+          style={[s.followBtn, following && s.followBtnActive]}
+          onPress={toggleFollow}
+          disabled={followBusy}
+          activeOpacity={0.85}
+        >
+          {followBusy ? (
+            <ActivityIndicator color={following ? C.onPrimary : C.primary} />
+          ) : (
+            <>
+              <Ionicons name={following ? 'notifications' : 'notifications-outline'} size={18} color={following ? C.onPrimary : C.primary} />
+              <Text style={[s.followText, following && s.followTextActive]}>
+                {following ? 'Takip ediliyor' : 'Bu raporu takip et'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         {/* Açıklama */}
         {report.description ? (
@@ -341,6 +406,11 @@ export default function ReportDetailScreen({ route }: any) {
               <Text style={[s.iletBtnText, { color: C.onPrimary }]}>Paylaş (WhatsApp, e-posta…)</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={[s.iletBtn, s.socialBtn]} onPress={onSocialShare} activeOpacity={0.85}>
+              <Ionicons name="megaphone-outline" size={18} color={C.onPrimary} />
+              <Text style={[s.iletBtnText, { color: C.onPrimary }]}>Sosyal medyada paylaş</Text>
+            </TouchableOpacity>
+
             {bld?.web ? (
               <TouchableOpacity style={s.iletBtn} onPress={() => openWith(bld.web!)} activeOpacity={0.85}>
                 <Ionicons name="business-outline" size={18} color={C.ink} />
@@ -423,12 +493,22 @@ const s = StyleSheet.create({
 
   body: { padding: S.lg, gap: S.md },
 
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
   typeChip: {
     alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: S.xs,
     backgroundColor: C.canvas, borderWidth: 1, borderColor: C.canvasSofter,
     paddingHorizontal: S.md, paddingVertical: 5, borderRadius: R.pill,
   },
   typeChipText: { fontSize: 12.5, fontWeight: '700', color: C.ink },
+
+  followBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm,
+    minHeight: 48, borderRadius: R.pill,
+    backgroundColor: C.canvas, borderWidth: 1.5, borderColor: C.primary,
+  },
+  followBtnActive: { backgroundColor: C.primary },
+  followText: { fontSize: 14, fontWeight: '800', color: C.primary },
+  followTextActive: { color: C.onPrimary },
 
   // Çözüm süresi banner'ı
   solvedBanner: {
@@ -452,6 +532,7 @@ const s = StyleSheet.create({
     paddingVertical: S.md, paddingHorizontal: S.md,
   },
   iletPrimary: { backgroundColor: C.primary },
+  socialBtn: { backgroundColor: C.secondary },
   iletBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
 
   descBox: {

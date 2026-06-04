@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS reports (
   reporter_ip TEXT,
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   status VARCHAR(20) DEFAULT 'open',
+  severity VARCHAR(20) DEFAULT 'medium',
   me_too_count INTEGER DEFAULT 0,
   moderation_status VARCHAR(20) DEFAULT 'approved',
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 
 CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status);
+CREATE INDEX IF NOT EXISTS reports_severity_idx ON reports (severity);
 CREATE INDEX IF NOT EXISTS reports_city_idx ON reports (city);
 CREATE INDEX IF NOT EXISTS reports_lat_lng_idx ON reports (lat, lng);
 
@@ -80,6 +82,31 @@ CREATE TABLE IF NOT EXISTS notifications (
   body TEXT,
   sent_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS report_follows (
+  id SERIAL PRIMARY KEY,
+  report_id INTEGER NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(report_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS report_follows_report_idx ON report_follows (report_id);
+CREATE INDEX IF NOT EXISTS report_follows_user_idx ON report_follows (user_id);
+
+CREATE TABLE IF NOT EXISTS area_subscriptions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT,
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  radius_km DOUBLE PRECISION NOT NULL DEFAULT 3,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS area_subscriptions_user_idx ON area_subscriptions (user_id);
+CREATE INDEX IF NOT EXISTS area_subscriptions_lat_lng_idx ON area_subscriptions (lat, lng);
 
 CREATE TABLE IF NOT EXISTS municipality_webhooks (
   id SERIAL PRIMARY KEY,

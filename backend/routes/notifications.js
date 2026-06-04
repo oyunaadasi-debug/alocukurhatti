@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const https = require('https');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const pool = require('../db/pool');
 const { requireAuth } = require('../middleware/auth');
 
@@ -67,6 +67,66 @@ router.delete('/token', requireAuth, [
 
   try {
     await pool.query('DELETE FROM push_tokens WHERE token = $1 AND user_id = $2', [req.body.token, req.user.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
+// GET /api/notifications/areas — kullanıcının takip ettiği bölgeler
+router.get('/areas', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, label, lat, lng, radius_km, created_at
+       FROM area_subscriptions
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ areas: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
+// POST /api/notifications/areas — bölge takibi oluştur
+router.post('/areas', requireAuth, [
+  body('lat').isFloat({ min: 35, max: 43 }).withMessage('Geçersiz enlem.'),
+  body('lng').isFloat({ min: 25, max: 45 }).withMessage('Geçersiz boylam.'),
+  body('radius_km').optional().isFloat({ min: 1, max: 10 }),
+  body('label').optional().isString().trim().isLength({ max: 120 }),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { lat, lng, radius_km = 3, label } = req.body;
+
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO area_subscriptions (user_id, label, lat, lng, radius_km)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, label, lat, lng, radius_km, created_at`,
+      [req.user.id, label || null, lat, lng, radius_km]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Sunucu hatası.' });
+  }
+});
+
+// DELETE /api/notifications/areas/:id — bölge takibini kaldır
+router.delete('/areas/:id', requireAuth, param('id').isInt(), async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  try {
+    await pool.query(
+      `DELETE FROM area_subscriptions WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
     res.json({ success: true });
   } catch (err) {
     console.error(err);

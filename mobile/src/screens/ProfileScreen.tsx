@@ -8,12 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
+import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
 import { API_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../config';
 
 type MyReport = {
   id: number; address: string; city: string; district: string;
-  status: string; me_too_count: number; created_at: string;
+  status: string; severity?: string; me_too_count: number; created_at: string;
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -53,15 +53,24 @@ export default function ProfileScreen({ navigation }: any) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [myReports, setMyReports] = useState<MyReport[]>([]);
+  const [followedReports, setFollowedReports] = useState<MyReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [reportTab, setReportTab] = useState<'mine' | 'following'>('mine');
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
       let active = true;
       setLoadingReports(true);
-      axios.get(`${API_URL}/reports/my`)
-        .then(({ data }) => { if (active) setMyReports(data.reports); })
+      Promise.allSettled([
+        axios.get(`${API_URL}/reports/my`),
+        axios.get(`${API_URL}/reports/following`),
+      ])
+        .then(([mine, following]) => {
+          if (!active) return;
+          if (mine.status === 'fulfilled') setMyReports(mine.value.data.reports);
+          if (following.status === 'fulfilled') setFollowedReports(following.value.data.reports);
+        })
         .catch(() => {})
         .finally(() => { if (active) setLoadingReports(false); });
       return () => { active = false; };
@@ -69,6 +78,7 @@ export default function ProfileScreen({ navigation }: any) {
   );
 
   const resolvedCount = myReports.filter(r => r.status === 'resolved').length;
+  const visibleReports = reportTab === 'mine' ? myReports : followedReports;
 
   async function handleLogout() {
     Alert.alert('Çıkış Yap', 'Hesabınızdan çıkmak istediğinize emin misiniz?', [
@@ -154,7 +164,7 @@ export default function ProfileScreen({ navigation }: any) {
 
       {/* Raporlarım — çözülenler bildirim olarak öne çıkar */}
       <View style={s.reportsHeader}>
-        <Text style={s.sectionTitle}>Raporlarım</Text>
+        <Text style={s.sectionTitle}>{reportTab === 'mine' ? 'Raporlarım' : 'Takip Ettiklerim'}</Text>
         {resolvedCount > 0 && (
           <View style={s.resolvedBadge}>
             <Ionicons name="checkmark-circle" size={14} color={C.onSuccess} />
@@ -163,16 +173,38 @@ export default function ProfileScreen({ navigation }: any) {
         )}
       </View>
 
+      <View style={s.reportTabs}>
+        <TouchableOpacity
+          style={[s.reportTab, reportTab === 'mine' && s.reportTabActive]}
+          onPress={() => setReportTab('mine')}
+          activeOpacity={0.85}
+        >
+          <Text style={[s.reportTabText, reportTab === 'mine' && s.reportTabTextActive]}>Raporlarım</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.reportTab, reportTab === 'following' && s.reportTabActive]}
+          onPress={() => setReportTab('following')}
+          activeOpacity={0.85}
+        >
+          <Text style={[s.reportTabText, reportTab === 'following' && s.reportTabTextActive]}>
+            Takip ({followedReports.length})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loadingReports ? (
         <ActivityIndicator color={C.primary} style={{ paddingVertical: S.lg }} />
-      ) : myReports.length === 0 ? (
+      ) : visibleReports.length === 0 ? (
         <View style={[s.emptyReports, elevation(1)]}>
-          <Ionicons name="document-text-outline" size={28} color={C.dim} />
-          <Text style={s.emptyText}>Henüz rapor göndermediniz.</Text>
+          <Ionicons name={reportTab === 'mine' ? 'document-text-outline' : 'notifications-outline'} size={28} color={C.dim} />
+          <Text style={s.emptyText}>
+            {reportTab === 'mine' ? 'Henüz rapor göndermediniz.' : 'Henüz takip ettiğiniz rapor yok.'}
+          </Text>
         </View>
       ) : (
-        myReports.map(r => {
+        visibleReports.map(r => {
           const sc = statusColor(r.status);
+          const sev = severityColor(r.severity);
           const isResolved = r.status === 'resolved';
           return (
             <TouchableOpacity
@@ -189,8 +221,13 @@ export default function ProfileScreen({ navigation }: any) {
                   {new Date(r.created_at).toLocaleDateString('tr-TR')} · {r.me_too_count} kişi gördü
                 </Text>
               </View>
-              <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
-                <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(r.status)}</Text>
+              <View style={s.pillStack}>
+                <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
+                  <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(r.status)}</Text>
+                </View>
+                <View style={[s.statusPill, { backgroundColor: sev.bg }]}>
+                  <Text style={[s.statusPillText, { color: sev.text }]}>{severityLabel(r.severity)}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -325,6 +362,15 @@ const s = StyleSheet.create({
   },
   resolvedBadgeText: { color: C.onSuccess, fontSize: 12, fontWeight: '700' },
 
+  reportTabs: {
+    flexDirection: 'row', backgroundColor: C.canvas, borderRadius: R.pill,
+    padding: 4, borderWidth: 1, borderColor: C.canvasSofter,
+  },
+  reportTab: { flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center', borderRadius: R.pill },
+  reportTabActive: { backgroundColor: C.primary },
+  reportTabText: { fontSize: 13, fontWeight: '800', color: C.body },
+  reportTabTextActive: { color: C.onPrimary },
+
   emptyReports: {
     backgroundColor: C.canvas, borderRadius: R.lg, padding: S.xl,
     alignItems: 'center', gap: S.sm,
@@ -340,6 +386,7 @@ const s = StyleSheet.create({
   reportMeta: { fontSize: 12, color: C.mute, marginTop: 2 },
   statusPill:     { paddingHorizontal: S.sm, paddingVertical: 3, borderRadius: R.pill },
   statusPillText: { fontSize: 11, fontWeight: '700' },
+  pillStack: { alignItems: 'flex-end', gap: 4 },
 
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

@@ -10,10 +10,16 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { C, R, S, elevation } from '../theme';
+import { C, R, S, elevation, severityColor, severityLabel } from '../theme';
 import { PillBtn, Divider, SectionTitle } from '../components/ui';
 import { API_URL } from '../config';
 import { ISSUE_TYPES, issueLabel } from '../data/belediyeler';
+
+const SEVERITIES = [
+  { key: 'small', icon: 'leaf-outline', hint: 'Küçük' },
+  { key: 'medium', icon: 'trail-sign-outline', hint: 'Orta' },
+  { key: 'dangerous', icon: 'warning-outline', hint: 'Tehlikeli' },
+];
 
 export default function AddReportScreen({ route, navigation }: any) {
   const passedLoc = route?.params?.userLocation;
@@ -26,6 +32,7 @@ export default function AddReportScreen({ route, navigation }: any) {
   const [district, setDistrict] = useState('');
   const [photo, setPhoto]       = useState<string | null>(null);
   const [issueType, setIssueType] = useState('cukur');
+  const [severity, setSeverity] = useState('medium');
   const [description, setDesc]  = useState('');
   const [name, setName]         = useState('');
   const [manualMode, setManual] = useState(false);
@@ -135,6 +142,7 @@ export default function AddReportScreen({ route, navigation }: any) {
       fd.append('lng', String(coords.lng));
       fd.append('photo', { uri: photo, type: 'image/jpeg', name: 'report.jpg' } as any);
       fd.append('issue_type', issueType);
+      fd.append('severity', severity);
       if (description) fd.append('description', description);
       if (name)        fd.append('reporter_name', name);
       if (address)     fd.append('address', address);
@@ -187,6 +195,31 @@ export default function AddReportScreen({ route, navigation }: any) {
                   <Ionicons name={t.icon as any} size={18} color={active ? C.onPrimary : C.body} />
                 </View>
                 <Text style={[s.typeLabel, active && s.typeLabelActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Divider mx={0} />
+
+        {/* ── Ciddiyet ── */}
+        <SectionTitle text="Ciddiyet" />
+        <View style={s.severityRow}>
+          {SEVERITIES.map(item => {
+            const active = severity === item.key;
+            const sc = severityColor(item.key);
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  s.severityChip,
+                  active && { backgroundColor: sc.bg, borderColor: sc.text },
+                ]}
+                onPress={() => setSeverity(item.key)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name={item.icon as any} size={16} color={active ? sc.text : C.body} />
+                <Text style={[s.severityText, active && { color: sc.text }]}>{severityLabel(item.key)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -310,6 +343,16 @@ const s = StyleSheet.create({
   typeIconActive: { backgroundColor: C.primary },
   typeLabel:       { fontSize: 13, fontWeight: '600', color: C.body },
   typeLabelActive: { color: C.ink, fontWeight: '700' },
+
+  severityRow: { flexDirection: 'row', gap: S.sm, marginBottom: S.sm },
+  severityChip: {
+    flex: 1, minHeight: 44,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.xs,
+    backgroundColor: C.canvas, borderWidth: 1.5, borderColor: C.canvasSofter,
+    borderRadius: R.pill,
+  },
+  severityText: { fontSize: 13, fontWeight: '700', color: C.body },
+
   mapBox:   { borderRadius: R.lg, overflow: 'hidden', height: 210, marginBottom: S.sm },
   map:      { flex: 1 },
   mapOverlay: {

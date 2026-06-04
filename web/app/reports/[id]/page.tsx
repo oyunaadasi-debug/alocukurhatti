@@ -34,14 +34,36 @@ const STATUS_COLOR: Record<string, string> = {
   rejected: '#9E9E9E',
 };
 
+const SEVERITY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  small: { label: 'Küçük', color: '#5C574D', bg: '#E8E2D6' },
+  medium: { label: 'Orta', color: '#178A70', bg: '#CDEDE3' },
+  dangerous: { label: 'Tehlikeli', color: '#C9524B', bg: '#F8D8CC' },
+};
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const res = await fetch(`${API}/api/reports/${params.id}`, { next: { revalidate: 60 } });
   if (!res.ok) return { title: 'Rapor Bulunamadı' };
   const report = await res.json();
   const iInfo = ISSUE_TYPE_MAP[report.issue_type] || ISSUE_TYPE_MAP.cukur;
+  const sev = SEVERITY_STYLE[report.severity] || SEVERITY_STYLE.medium;
+  const place = [report.address, report.district, report.city].filter(Boolean).join(', ') || 'Türkiye';
+  const pageUrl = `${SITE_URL}/reports/${params.id}`;
+  const description = `${place} için ${sev.label.toLowerCase()} ${iInfo.label.toLowerCase()} bildirimi. ${report.me_too_count || 0} kişi de gördü.`;
   return {
-    title: `${iInfo.emoji} ${iInfo.label} Raporu — ${report.address || report.city || 'Türkiye'} | Alo Çukur Hattı`,
-    description: report.description || `${report.city || ''} ${report.district || ''} bölgesinde ${iInfo.label.toLowerCase()} raporu.`,
+    title: `${iInfo.emoji} ${iInfo.label} Raporu — ${place} | Alo Çukur Hattı`,
+    description: report.description || description,
+    openGraph: {
+      title: `${iInfo.emoji} ${sev.label} ${iInfo.label} Bildirimi`,
+      description,
+      url: pageUrl,
+      images: report.photo_url ? [{ url: report.photo_url }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${iInfo.emoji} ${sev.label} ${iInfo.label} Bildirimi`,
+      description,
+      images: report.photo_url ? [report.photo_url] : undefined,
+    },
   };
 }
 
@@ -55,6 +77,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
   const statusColor = STATUS_COLOR[report.status] || '#9E9E9E';
   const statusLabel = STATUS_LABEL[report.status] || report.status;
   const issueInfo = ISSUE_TYPE_MAP[report.issue_type] || ISSUE_TYPE_MAP.cukur;
+  const severityInfo = SEVERITY_STYLE[report.severity] || SEVERITY_STYLE.medium;
   const date = new Date(report.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
   const pageUrl = `${SITE_URL}/reports/${params.id}`;
   const shareText = `Alo Çukur Hattı: ${report.address || report.city || 'Yol hasarı'} bölgesinde ${issueInfo.label.toLowerCase()} bildirimi. ${pageUrl}`;
@@ -72,6 +95,9 @@ export default async function ReportPage({ params }: { params: { id: string } })
           </span>
           <span style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 600 }}>
             {issueInfo.emoji} {issueInfo.label}
+          </span>
+          <span style={{ position: 'absolute', bottom: 12, left: 12, background: severityInfo.bg, color: severityInfo.color, borderRadius: 999, padding: '4px 12px', fontSize: 13, fontWeight: 700 }}>
+            {severityInfo.label}
           </span>
         </div>
 

@@ -5,14 +5,15 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
 import { API_URL } from '../config';
 import { ISSUE_TYPES, issueIcon, issueLabel } from '../data/belediyeler';
 
 type Report = {
   id: number; lat: number; lng: number;
   address: string; city: string; district: string;
-  me_too_count: number; status: string; created_at: string; issue_type?: string;
+  me_too_count: number; status: string; created_at: string; issue_type?: string; severity?: string;
 };
 
 const STATUS_PIN: Record<string, string> = {
@@ -23,6 +24,7 @@ const STATUS_PIN: Record<string, string> = {
 };
 
 export default function MapScreen({ navigation, route }: any) {
+  const { user } = useAuth();
   const filterCity: string | undefined     = route?.params?.filterCity;
   const filterDistrict: string | undefined = route?.params?.filterDistrict;
   const centerLat: number | undefined      = route?.params?.centerLat;
@@ -34,13 +36,16 @@ export default function MapScreen({ navigation, route }: any) {
   const [userLoc, setUserLoc]   = useState<{ lat: number; lng: number } | null>(null);
   const [selected, setSelected] = useState<Report | null>(null);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [nearbyRadius, setNearbyRadius] = useState(3);
+  const [areaBusy, setAreaBusy] = useState(false);
+  const [areaFollowed, setAreaFollowed] = useState(false);
   const [region, setRegion]     = useState<Region>({
     latitude: centerLat ?? 39.0, longitude: centerLng ?? 35.0,
     latitudeDelta: filterDistrict ? 0.05 : filterCity ? 0.5 : 8,
     longitudeDelta: filterDistrict ? 0.05 : filterCity ? 0.5 : 8,
   });
 
-  useEffect(() => { load(); }, [filterCity, filterDistrict]);
+  useEffect(() => { load(); }, [filterCity, filterDistrict, nearbyRadius]);
 
   async function load() {
     setLoading(true);
@@ -58,7 +63,7 @@ export default function MapScreen({ navigation, route }: any) {
       }
 
       const { data } = await axios.get(`${API_URL}/reports`, {
-        params: { lat: !filterCity ? lat : undefined, lng: !filterCity ? lng : undefined, radius: 50, city: filterCity },
+        params: { lat: !filterCity ? lat : undefined, lng: !filterCity ? lng : undefined, radius: !filterCity ? nearbyRadius : 50, city: filterCity },
       });
       const all: Report[] = data.reports;
       setReports(filterDistrict ? all.filter(r => r.district === filterDistrict) : all);
@@ -77,6 +82,32 @@ export default function MapScreen({ navigation, route }: any) {
     }, 500);
   }
 
+  async function followArea() {
+    if (!user) {
+      Alert.alert('Giriş Yapın', 'Yakınınızdaki yeni raporlar için bildirim almak üzere giriş yapmanız gerekiyor.', [
+        { text: 'Vazgeç', style: 'cancel' },
+        { text: 'Giriş Yap', onPress: () => navigation.navigate('Auth') },
+      ]);
+      return;
+    }
+    const center = userLoc ?? { lat: region.latitude, lng: region.longitude };
+    setAreaBusy(true);
+    try {
+      await axios.post(`${API_URL}/notifications/areas`, {
+        lat: center.lat,
+        lng: center.lng,
+        radius_km: nearbyRadius,
+        label: filterDistrict || filterCity || `Yakınımda ${nearbyRadius} km`,
+      });
+      setAreaFollowed(true);
+      Alert.alert('Takip başladı', `Bu bölgedeki yeni raporlar için bildirim alacaksınız.`);
+    } catch {
+      Alert.alert('Hata', 'Bölge takibi başlatılamadı.');
+    } finally {
+      setAreaBusy(false);
+    }
+  }
+
   const visibleReports = typeFilter ? reports.filter(r => r.issue_type === typeFilter) : reports;
 
   const badgeLabel = filterDistrict
@@ -91,6 +122,7 @@ export default function MapScreen({ navigation, route }: any) {
         style={s.map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region}
+        onRegionChangeComplete={setRegion}
         onPress={() => setSelected(null)}
         showsUserLocation
         showsMyLocationButton={false}
@@ -124,34 +156,70 @@ export default function MapScreen({ navigation, route }: any) {
 
       {/* Sorun türü filtresi */}
       {!loading && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.filterBar}
-          contentContainerStyle={s.filterContent}
-        >
-          <TouchableOpacity
-            style={[s.filterChip, !typeFilter && s.filterChipActive, elevation(1)]}
-            onPress={() => setTypeFilter(null)}
-            activeOpacity={0.85}
-          >
-            <Text style={[s.filterChipText, !typeFilter && s.filterChipTextActive]}>Tümü</Text>
-          </TouchableOpacity>
-          {ISSUE_TYPES.map(t => {
-            const active = typeFilter === t.key;
-            return (
+        <>
+          {!filterCity && (
+            <View style={[s.nearbyPanel, elevation(2)]}>
+              <View style={s.radiusRow}>
+                {[1, 3, 10].map(r => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[s.radiusChip, nearbyRadius === r && s.radiusChipActive]}
+                    onPress={() => { setNearbyRadius(r); setAreaFollowed(false); }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[s.radiusText, nearbyRadius === r && s.radiusTextActive]}>{r} km</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <TouchableOpacity
-                key={t.key}
-                style={[s.filterChip, active && s.filterChipActive, elevation(1)]}
-                onPress={() => setTypeFilter(active ? null : t.key)}
+                style={[s.areaFollowBtn, areaFollowed && s.areaFollowBtnActive]}
+                onPress={followArea}
+                disabled={areaBusy || areaFollowed}
                 activeOpacity={0.85}
               >
-                <Ionicons name={t.icon as any} size={14} color={active ? C.onPrimary : C.body} />
-                <Text style={[s.filterChipText, active && s.filterChipTextActive]}>{t.label}</Text>
+                {areaBusy ? (
+                  <ActivityIndicator color={C.primary} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name={areaFollowed ? 'notifications' : 'notifications-outline'} size={14} color={areaFollowed ? C.onPrimary : C.primary} />
+                    <Text style={[s.areaFollowText, areaFollowed && s.areaFollowTextActive]}>
+                      {areaFollowed ? 'Bölge takipte' : 'Bu bölgeyi takip et'}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            </View>
+          )}
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[s.filterBar, !filterCity && { top: 124 }]}
+            contentContainerStyle={s.filterContent}
+          >
+            <TouchableOpacity
+              style={[s.filterChip, !typeFilter && s.filterChipActive, elevation(1)]}
+              onPress={() => setTypeFilter(null)}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.filterChipText, !typeFilter && s.filterChipTextActive]}>Tümü</Text>
+            </TouchableOpacity>
+            {ISSUE_TYPES.map(t => {
+              const active = typeFilter === t.key;
+              return (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[s.filterChip, active && s.filterChipActive, elevation(1)]}
+                  onPress={() => setTypeFilter(active ? null : t.key)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name={t.icon as any} size={14} color={active ? C.onPrimary : C.body} />
+                  <Text style={[s.filterChipText, active && s.filterChipTextActive]}>{t.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </>
       )}
 
       {/* Seçili rapor kartı — double-bezel (dış kabuk + iç çekirdek) */}
@@ -162,9 +230,15 @@ export default function MapScreen({ navigation, route }: any) {
               <Text style={s.cardTitle}>{issueLabel(selected.issue_type)}</Text>
               {(() => {
                 const sc = statusColor(selected.status);
+                const sev = severityColor(selected.severity);
                 return (
-                  <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
-                    <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(selected.status)}</Text>
+                  <View style={s.cardPills}>
+                    <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
+                      <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(selected.status)}</Text>
+                    </View>
+                    <View style={[s.statusPill, { backgroundColor: sev.bg }]}>
+                      <Text style={[s.statusPillText, { color: sev.text }]}>{severityLabel(selected.severity)}</Text>
+                    </View>
                   </View>
                 );
               })()}
@@ -257,6 +331,30 @@ const s = StyleSheet.create({
   filterChipText: { fontSize: 12.5, fontWeight: '700', color: C.body },
   filterChipTextActive: { color: C.onPrimary },
 
+  nearbyPanel: {
+    position: 'absolute', top: 56, left: 14, right: 14,
+    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+    backgroundColor: C.canvas, borderRadius: R.xl,
+    borderWidth: 1, borderColor: C.canvasSofter,
+    padding: S.sm,
+  },
+  radiusRow: { flexDirection: 'row', gap: S.xs, flex: 1 },
+  radiusChip: {
+    flex: 1, minHeight: 34, borderRadius: R.pill,
+    backgroundColor: C.canvasSoft, alignItems: 'center', justifyContent: 'center',
+  },
+  radiusChipActive: { backgroundColor: C.primary },
+  radiusText: { fontSize: 12, fontWeight: '800', color: C.body },
+  radiusTextActive: { color: C.onPrimary },
+  areaFollowBtn: {
+    minHeight: 34, paddingHorizontal: S.md, borderRadius: R.pill,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.xs,
+    borderWidth: 1.5, borderColor: C.primary,
+  },
+  areaFollowBtnActive: { backgroundColor: C.primary },
+  areaFollowText: { fontSize: 12, fontWeight: '800', color: C.primary },
+  areaFollowTextActive: { color: C.onPrimary },
+
   // Double-bezel: dış kabuk (sıcak yüzey + hairline) → iç çekirdek (krem)
   cardShell: {
     position: 'absolute', bottom: 110, left: 16, right: 16,
@@ -272,6 +370,7 @@ const s = StyleSheet.create({
   },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm },
   cardTitle: { fontSize: 16, fontWeight: '800', color: C.ink, letterSpacing: -0.2 },
+  cardPills: { alignItems: 'flex-end', gap: 4 },
   statusPill: { paddingHorizontal: S.sm, paddingVertical: 3, borderRadius: R.pill },
   statusPillText: { fontSize: 11, fontWeight: '700' },
   cardAddr:  { fontSize: 13.5, color: C.body, lineHeight: 19 },

@@ -8,7 +8,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
-import { C, R, S, elevation, statusColor, statusLabel } from '../theme';
+import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
 import { API_URL } from '../config';
 import { issueLabel, issueIcon } from '../data/belediyeler';
 
@@ -16,7 +16,7 @@ type Report = {
   id: number; lat: number; lng: number;
   address: string; city: string; district: string;
   photo_url: string; status: string; me_too_count: number;
-  created_at: string; issue_type?: string;
+  created_at: string; issue_type?: string; severity?: string;
 };
 
 export default function HomeScreen({ navigation }: any) {
@@ -117,6 +117,7 @@ export default function HomeScreen({ navigation }: any) {
       ) : (
         recent.map(r => {
           const sc = statusColor(r.status);
+          const sev = severityColor(r.severity);
           return (
             <TouchableOpacity
               key={r.id}
@@ -140,8 +141,13 @@ export default function HomeScreen({ navigation }: any) {
                   {r.me_too_count} kişi gördü · {new Date(r.created_at).toLocaleDateString('tr-TR')}
                 </Text>
               </View>
-              <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
-                <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(r.status)}</Text>
+              <View style={s.pillStack}>
+                <View style={[s.statusPill, { backgroundColor: sc.bg }]}>
+                  <Text style={[s.statusPillText, { color: sc.text }]}>{statusLabel(r.status)}</Text>
+                </View>
+                <View style={[s.statusPill, { backgroundColor: sev.bg }]}>
+                  <Text style={[s.statusPillText, { color: sev.text }]}>{severityLabel(r.severity)}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -239,6 +245,7 @@ const s = StyleSheet.create({
   repMeta:  { fontSize: 11.5, color: C.mute, marginTop: 2 },
   statusPill:     { paddingHorizontal: S.sm, paddingVertical: 3, borderRadius: R.pill },
   statusPillText: { fontSize: 10.5, fontWeight: '700' },
+  pillStack: { alignItems: 'flex-end', gap: 4 },
 
   // Harita kartı
   mapCard: {

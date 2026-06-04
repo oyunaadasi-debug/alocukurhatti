@@ -4,6 +4,13 @@ const pool = require('../db/pool');
 
 // GET /api/stats/cities — iller lider tablosu
 router.get('/cities', async (req, res) => {
+  const sort = ['open', 'supported', 'fastest'].includes(req.query.sort) ? req.query.sort : 'open';
+  const orderBy = sort === 'supported'
+    ? 'total_metoo DESC, total_count DESC'
+    : sort === 'fastest'
+      ? 'avg_resolution_hours ASC NULLS LAST, resolved_count DESC'
+      : 'open_count DESC, total_count DESC';
+
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -11,12 +18,20 @@ router.get('/cities', async (req, res) => {
         COUNT(*) FILTER (WHERE status != 'resolved') AS open_count,
         COUNT(*) FILTER (WHERE status = 'resolved')  AS resolved_count,
         COUNT(*)                                      AS total_count,
-        SUM(me_too_count)                             AS total_metoo
+        SUM(me_too_count)                             AS total_metoo,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS last_7_days,
+        ROUND(AVG(EXTRACT(EPOCH FROM (res.first_resolved_at - reports.created_at)) / 3600)
+          FILTER (WHERE res.first_resolved_at IS NOT NULL), 1) AS avg_resolution_hours
       FROM reports
+      LEFT JOIN (
+        SELECT report_id, MIN(created_at) AS first_resolved_at
+        FROM resolutions
+        GROUP BY report_id
+      ) res ON res.report_id = reports.id
       WHERE moderation_status = 'approved'
         AND city IS NOT NULL AND city != ''
       GROUP BY city
-      ORDER BY open_count DESC, total_count DESC
+      ORDER BY ${orderBy}
       LIMIT 81
     `);
     res.json({ cities: rows });
@@ -37,9 +52,17 @@ router.get('/cities/:city', async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'resolved')  AS resolved_count,
         COUNT(*)                                      AS total_count,
         SUM(me_too_count)                             AS total_metoo,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS last_7_days,
+        ROUND(AVG(EXTRACT(EPOCH FROM (res.first_resolved_at - reports.created_at)) / 3600)
+          FILTER (WHERE res.first_resolved_at IS NOT NULL), 1) AS avg_resolution_hours,
         AVG(lat) AS center_lat,
         AVG(lng) AS center_lng
       FROM reports
+      LEFT JOIN (
+        SELECT report_id, MIN(created_at) AS first_resolved_at
+        FROM resolutions
+        GROUP BY report_id
+      ) res ON res.report_id = reports.id
       WHERE moderation_status = 'approved'
         AND city ILIKE $1
         AND district IS NOT NULL AND district != ''
@@ -54,9 +77,17 @@ router.get('/cities/:city', async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'resolved')  AS resolved_count,
         COUNT(*)                                      AS total_count,
         SUM(me_too_count)                             AS total_metoo,
+        COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS last_7_days,
+        ROUND(AVG(EXTRACT(EPOCH FROM (res.first_resolved_at - reports.created_at)) / 3600)
+          FILTER (WHERE res.first_resolved_at IS NOT NULL), 1) AS avg_resolution_hours,
         AVG(lat) AS center_lat,
         AVG(lng) AS center_lng
       FROM reports
+      LEFT JOIN (
+        SELECT report_id, MIN(created_at) AS first_resolved_at
+        FROM resolutions
+        GROUP BY report_id
+      ) res ON res.report_id = reports.id
       WHERE moderation_status = 'approved'
         AND city ILIKE $1
     `, [city]);
