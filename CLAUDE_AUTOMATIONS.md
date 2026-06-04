@@ -72,6 +72,52 @@
 - **Nasıl çağırılır:** "API belgesi oluştur" yaz
 - **Durum:** ✅ Hazır
 
+### growth-council
+- **Ne yapar:** CEO, sosyal medya, reklam, data, ASO, belediye, moderasyon ve UX perspektiflerini tek faz planında birleştirir
+- **Dosya:** `.codex/agents/growth-council.toml`
+- **Nasıl çağırılır:** "büyüme ekibiyle düşün", "faz planı çıkar", "ürün şirketi gibi değerlendir" yaz
+- **Durum:** ✅ Hazır
+
+### product-ceo
+- **Ne yapar:** Faz 1/2/3 ürün stratejisi ve önceliklendirme yapar
+- **Dosya:** `.codex/agents/product-ceo.toml`
+- **Durum:** ✅ Hazır
+
+### social-media-manager
+- **Ne yapar:** TikTok, Instagram, X ve yerel topluluk içerikleri üretir
+- **Dosya:** `.codex/agents/social-media-manager.toml`
+- **Durum:** ✅ Hazır
+
+### data-analyst
+- **Ne yapar:** Funnel, şehir/ilçe metrikleri ve büyüme raporları çıkarır
+- **Dosya:** `.codex/agents/data-analyst.toml`
+- **Durum:** ✅ Hazır
+
+### ads-manager
+- **Ne yapar:** Düşük bütçeli reklam testleri, hedef kitle ve kreatif planı çıkarır
+- **Dosya:** `.codex/agents/ads-manager.toml`
+- **Durum:** ✅ Hazır
+
+### app-store-aso-specialist
+- **Ne yapar:** App Store / Google Play başlık, açıklama, anahtar kelime ve screenshot stratejisi üretir
+- **Dosya:** `.codex/agents/app-store-aso-specialist.toml`
+- **Durum:** ✅ Hazır
+
+### municipality-partnerships-lead
+- **Ne yapar:** Belediye ve kurum iş birlikleri için güvenli teklif ve pilot stratejisi üretir
+- **Dosya:** `.codex/agents/municipality-partnerships-lead.toml`
+- **Durum:** ✅ Hazır
+
+### community-moderation-lead
+- **Ne yapar:** UGC güvenliği, kötüye kullanım ve moderasyon risklerini yönetir
+- **Dosya:** `.codex/agents/community-moderation-lead.toml`
+- **Durum:** ✅ Hazır
+
+### ux-researcher
+- **Ne yapar:** Teknik olmayan vatandaş gözüyle ekran akışlarını ve sürtünmeleri inceler
+- **Dosya:** `.codex/agents/ux-researcher.toml`
+- **Durum:** ✅ Hazır
+
 ---
 
 ## 🎨 Yüklü Plugin'ler ve Kullanım Senaryoları

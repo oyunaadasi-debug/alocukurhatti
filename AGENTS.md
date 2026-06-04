@@ -64,6 +64,17 @@
 - **Hooks:** `.env` koruma (PreToolUse) + web/ TypeScript otomatik `tsc --noEmit` (PostToolUse)
 - **Skills:** `/api-endpoint` (Express route scaffold), `/db-migration` (idempotent PostGIS migration)
 - **Agents:** `security-reviewer` (OWASP), `api-documenter` (OpenAPI üretir)
+- **Büyüme/ürün ajanları:** `growth-council`, `product-ceo`, `social-media-manager`, `data-analyst`, `ads-manager`, `app-store-aso-specialist`, `municipality-partnerships-lead`, `community-moderation-lead`, `ux-researcher`
+
+## Fazlı Ürün Geliştirme Düzeni
+
+Detaylı faz dosyası: `PRODUCT_PHASES.md`
+
+- **Faz 1:** App Store sonrası ilk büyüme — rapor ekleme, takip, paylaşım, yakınımdaki raporlar, mağaza dönüşümü.
+- **Faz 2:** Şehir bazlı yayılım — yerel sosyal medya, şehir/ilçe nabız verisi, topluluk ve küçük reklam testleri.
+- **Faz 3:** Kurumsal/akademik ölçek — belediye pilotları, açık veri, akademik raporlar, sponsor/AdMob gelir modeli.
+
+Çalışma prensibi: Yeni ürün/pazarlama kararı istenirse önce `growth-council` bakışıyla düşün; teknik uygulamaya geçilecekse ilgili uzman bakışını da kullan.
 
 ---
 
