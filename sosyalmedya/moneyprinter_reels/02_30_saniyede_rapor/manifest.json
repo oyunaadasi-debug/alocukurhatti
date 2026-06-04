@@ -1,0 +1,48 @@
+{
+  "project": "alocukurhatti",
+  "reel_id": "02_30_saniyede_rapor",
+  "subject": "Alo Çukur Hattı 30 saniyede rapor",
+  "script": "Alo Çukur Hattı'nda rapor atmak çok kısa sürer. Önce Çukur Bildir'e dokun. Sorun türünü seç. Çukur, bozuk yol, kaldırım veya su birikintisi seçebilirsin. Sorun tehlikeliyse ayrıca işaretle. Fotoğrafını çek veya galeriden seç. Konumu kontrol et, gerekirse haritadan düzelt. Gönder. Rapor haritada görünür olsun.",
+  "voice_name": "tr-TR-AhmetNeural",
+  "voice_rate": 1.04,
+  "clip_duration": 4,
+  "scenes": [
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/cover.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_01.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_02.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_03.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_04.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_05.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/04_reels_30_saniye/storyboard_06.png",
+      "duration": 4
+    }
+  ],
+  "style": {
+    "font_size": 52,
+    "text_fore_color": "#FFFFFF",
+    "stroke_color": "#133229",
+    "stroke_width": 2,
+    "subtitle_position": "bottom",
+    "bgm_type": "random",
+    "bgm_volume": 0.12
+  }
+}

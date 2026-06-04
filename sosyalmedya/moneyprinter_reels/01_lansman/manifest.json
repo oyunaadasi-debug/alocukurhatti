@@ -1,0 +1,44 @@
+{
+  "project": "alocukurhatti",
+  "reel_id": "01_lansman",
+  "subject": "Alo Çukur Hattı lansman",
+  "script": "Bu çukuru her gün görüyorsun. Artık sadece söylenmek yerine kayda alabilirsin. Alo Çukur Hattı'nı aç, fotoğrafını çek. Konumunu işaretle, rapor haritada görünsün. Aynı sorunu görenler destek versin, sorun görünür olsun. Alo Çukur Hattı ücretsiz. Bugün ilk raporunu bildir.",
+  "voice_name": "tr-TR-AhmetNeural",
+  "voice_rate": 1.05,
+  "clip_duration": 4,
+  "scenes": [
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/cover.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/storyboard_01.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/storyboard_02.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/storyboard_03.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/storyboard_04.png",
+      "duration": 4
+    },
+    {
+      "path": "../../ready_content/ilk_5/01_reels_lansman/storyboard_05.png",
+      "duration": 4
+    }
+  ],
+  "style": {
+    "font_size": 56,
+    "text_fore_color": "#FFFFFF",
+    "stroke_color": "#133229",
+    "stroke_width": 2,
+    "subtitle_position": "bottom",
+    "bgm_type": "random",
+    "bgm_volume": 0.12
+  }
+}
