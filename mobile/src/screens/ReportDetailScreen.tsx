@@ -6,6 +6,7 @@ import {
 import { Text } from '../components/AppText';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -114,13 +115,28 @@ export default function ReportDetailScreen({ route, navigation }: any) {
   async function postUpdate(updateType: 'still_unresolved' | 'resolution_proof', photoUri?: string) {
     setUpdating(true);
     try {
-      const fd = new FormData();
-      fd.append('update_type', updateType);
-      if (photoUri) fd.append('photo', { uri: photoUri, type: 'image/jpeg', name: 'update.jpg' } as any);
-      await axios.post(`${API_URL}/reports/${reportId}/updates`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000,
-      });
+      if (photoUri) {
+        const res = await FileSystem.uploadAsync(`${API_URL}/reports/${reportId}/updates`, photoUri, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'photo',
+          mimeType: 'image/jpeg',
+          parameters: { update_type: updateType },
+        });
+        if (res.status < 200 || res.status >= 300) {
+          let msg = 'Güncelleme gönderilemedi.';
+          try { msg = JSON.parse(res.body)?.error || msg; } catch {}
+          Alert.alert('Hata', msg);
+          return;
+        }
+      } else {
+        const fd = new FormData();
+        fd.append('update_type', updateType);
+        await axios.post(`${API_URL}/reports/${reportId}/updates`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 30000,
+        });
+      }
       await fetch();
       Alert.alert('Teşekkürler!', 'Güncellemeniz kaydedildi.');
     } catch (err: any) {

@@ -8,8 +8,8 @@ import { Text } from '../components/AppText';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { C, R, S, elevation, severityColor, severityLabel } from '../theme';
 import { PillBtn, Divider, SectionTitle } from '../components/ui';
 import { API_URL } from '../config';
@@ -137,28 +137,37 @@ export default function AddReportScreen({ route, navigation }: any) {
 
     setSubmit(true);
     try {
-      const fd = new FormData();
-      fd.append('lat', String(coords.lat));
-      fd.append('lng', String(coords.lng));
-      fd.append('photo', { uri: photo, type: 'image/jpeg', name: 'report.jpg' } as any);
-      fd.append('issue_type', issueType);
-      fd.append('severity', severity);
-      if (description) fd.append('description', description);
-      if (name)        fd.append('reporter_name', name);
-      if (address)     fd.append('address', address);
-      if (city)        fd.append('city', city);
-      if (district)    fd.append('district', district);
+      const params: Record<string, string> = {
+        lat: String(coords.lat),
+        lng: String(coords.lng),
+        issue_type: issueType,
+        severity,
+      };
+      if (description) params.description = description;
+      if (name)        params.reporter_name = name;
+      if (address)     params.address = address;
+      if (city)        params.city = city;
+      if (district)    params.district = district;
 
-      await axios.post(`${API_URL}/reports`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000,
+      const res = await FileSystem.uploadAsync(`${API_URL}/reports`, photo, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'photo',
+        mimeType: 'image/jpeg',
+        parameters: params,
       });
 
-      Alert.alert('Teşekkürler!', 'Raporunuz alındı. Haritada görünecek.', [
-        { text: 'Tamam', onPress: () => navigation.goBack() },
-      ]);
+      if (res.status >= 200 && res.status < 300) {
+        Alert.alert('Teşekkürler!', 'Raporunuz alındı. Haritada görünecek.', [
+          { text: 'Tamam', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        let msg = 'Rapor gönderilemedi.';
+        try { msg = JSON.parse(res.body)?.error || msg; } catch {}
+        Alert.alert('Hata', msg);
+      }
     } catch (err: any) {
-      Alert.alert('Hata', err.response?.data?.error || 'Rapor gönderilemedi.');
+      Alert.alert('Hata', 'Rapor gönderilemedi. İnternet bağlantınızı kontrol edin.');
     } finally {
       setSubmit(false);
     }
