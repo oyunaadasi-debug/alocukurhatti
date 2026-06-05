@@ -1,10 +1,14 @@
 # 📱 Alo Çukur Hattı — App Store Durum / Yapılacaklar
 
-**Son güncelleme:** 2 Haziran 2026
+**Son güncelleme:** 5 Haziran 2026
 
-## 🔴 Red (çözülüyor)
-- **Guideline 5.1.1(v)** — Hesap silme yok. (Build 4, v1.0.0)
-- Apple: hesap açan uygulamada **uygulama içi hesap silme** olmalı + **ekran kaydı** istiyor.
+## ✅ Güncel Durum
+- Önceki red sebebi olan kamera/izin akışı düzeltildi.
+- Daha önceki hesap silme gereksinimi için uygulama içi **Hesabımı Sil** akışı mevcut.
+- Canlı veritabanına V1 migration uygulandı: `severity`, `report_follows`, `area_subscriptions`.
+- Backend production deploy edildi ve canlı API doğrulandı: raporlarda `severity` dönüyor, yakınımdaki rapor sorgusu çalışıyor.
+- iOS Store build alındı ve App Store Connect'e yüklendi: **v1.0.0 / build 10**.
+- Apple şu anda build'i App Store Connect/TestFlight tarafında işliyor.
 
 ## ✅ YAPILDI
 - **Backend** (`backend/routes/auth.js`): `DELETE /api/auth/account` eklendi — kimlik doğrulamalı, kullanıcı kendi hesabını kalıcı siler (raporlar anonimleşir SET NULL, push/bildirim CASCADE, resolutions.resolved_by önce boşaltılır). **Commit:** `1cb00b1`.
@@ -21,26 +25,18 @@
 - Güvenlik düzeltmesi: herkese açık kayıt akışı yalnızca `citizen` hesabı oluşturur; belediye/admin rolleri yalnızca yönetici tarafından atanır.
 - Backend güvenlik düzeltmesi canlıya alındı ve doğrulandı: dışarıdan `municipality` kaydı → HTTP 400.
 - App Store için `1290×2796` ölçüsünde çerçeveli ekran görselleri üretildi (`app-store-assets/screenshots/6.9-framed/`). İlk ve üçüncü görsel kullanılabilir; sıralama görseli Build 6 sonrası temiz çekimle yenilenecek.
-- Bu değişiklikler nedeniyle Build 5 yerine **Build 6** hazırlanmalı.
+- 5 Haziran 2026: V1 büyüme özellikleri sonrası **Build 10** hazırlandı ve App Store Connect'e yüklendi.
 
 ## ⏳ KALDIĞIMIZ YER — YAPILACAKLAR
-1. **Build 6 al**:
-   ```
-   cd "C:\Users\talha\OneDrive\Masaüstü\telegram bot\alocukurhatti\mobile"
-   npx eas-cli build --platform ios --profile production
-   ```
-2. **Submit build 6** — otomatik submit takılırsa interaktif Apple girişiyle:
-   ```
-   cd "C:\Users\talha\OneDrive\Masaüstü\telegram bot\alocukurhatti\mobile"
-   npx eas-cli submit --platform ios --profile production --latest
-   ```
-   → Apple girişi/anahtarı seç (mevcut "[Expo] EAS Submit" anahtarını kullanabilirsin). Bir kez kurulunca sonraki seferler otomatik.
-3. **Ekran kaydı (ZORUNLU)** — build 6 TestFlight'a düşünce fiziksel cihazda kaydet:
+1. App Store Connect'te build 10 processing bitince sürüme seç.
+2. App Store metadata'yı güncelle: açıklama, anahtar kelime, gizlilik cevapları.
+3. Ekran görüntülerini mümkünse V1 özellikleriyle yenile: takip, yakınımdaki raporlar, ciddiyet.
+4. **Ekran kaydı (önceki red için önerilir)** — fiziksel cihazda kaydet:
    giriş/kayıt → **Profil** → **"Hesabımı Sil"** → onay → hesap silinir + çıkış.
-4. **ASC** → App Review Information → **Notes**'a kaydı ekle.
-5. **Resolution Center** cevabı:
+5. **ASC** → App Review Information → **Notes**'a kaydı ekle.
+6. **Resolution Center** cevabı:
    > *"Account deletion has been added: Profile → 'Hesabımı Sil' (Delete My Account) → confirm. This permanently deletes the user's account and personal data (DELETE /api/auth/account). A screen recording of the full flow is included in the App Review notes."*
-6. **Submit for Review.**
+7. **Submit for Review.**
 
 ## Notlar
 - Kod değişiklikleri yerelde commit'li (`1cb00b1`); GitHub'a push edilmedi (oyunaadasi-debug repo'su — push için o hesap gerekir). Build/deploy için gerekmedi.

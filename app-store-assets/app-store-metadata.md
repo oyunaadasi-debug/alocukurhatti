@@ -51,17 +51,22 @@ Yolda bir çukur mu gördünüz? Fotoğrafını çekin, konumunu haritaya işley
 
 NELER YAPABİLİRSİNİZ?
 • Çukuru fotoğrafla, otomatik konumla haritaya ekle
+• Hasarın ciddiyetini seç: Küçük, Orta veya Tehlikeli
 • Kayıt olmadan, anonim bildirim gönder
 • Tüm bildirimleri canlı harita üzerinde gör
+• Yakınındaki raporları 1 km / 3 km / 10 km yarıçapla filtrele
 • "Ben de Gördüm" ile başkalarının bildirimlerini destekle
+• Önemli raporları takip et, güncellemeleri kaçırma
 • Bildirim durumunu izle: Açık → Belediyeye İletildi → İnceleniyor → Çözüldü
 • Çözülen çukurların önceki/sonraki halini yan yana gör
+• Şehir ve ilçe bazında açık/çözülen sorunları keşfet
 • Katkı sıralamasında yer al
 
 NEDEN ALO ÇUKUR HATTI?
 • Tamamen ücretsiz, kâr amacı gütmeyen sosyal sorumluluk projesi
 • Kamuya açık, şeffaf veri — belediyeleri hesap vermeye teşvik eder
 • KVKK uyumlu: ham IP adresiniz asla saklanmaz, konum yalnızca rapor anında kullanılır
+• Sürekli arka plan konumu istemez; konum yalnızca rapor ve yakın çevre özellikleri için kullanılır
 • Yüklenen tüm fotoğraflar otomatik güvenli içerik kontrolünden geçer
 
 Yolların güvenliği hepimizin sorumluluğu. Bir çukur, bir bildirim ile başlar.
@@ -96,6 +101,7 @@ Toplanan veriler ve amaçları:
 | IP adresi | Hayır* | — | — |
 
 - *IP adresi geri döndürülemez şekilde özetlenir (SHA-256 hash); ham IP saklanmaz.
+- Rapor takibi ve bölge takibi yalnızca giriş yapan kullanıcılar için çalışır; arka plan konumu kullanılmaz.
 - Mevcut mobil sürümde reklam SDK'sı bulunmamaktadır. İleride reklam eklenirse App Privacy yanıtları güncellenmelidir.
 - Veri satışı: YOK. Üçüncü taraflarla paylaşım: yalnızca ilgili belediye/yol bakım kurumlarıyla rapor paylaşımı.
 
@@ -113,8 +119,9 @@ Toplanan veriler ve amaçları:
 
 - [x] EAS projectId güncellendi (`mobile/app.json` → extra.eas.projectId)
 - [x] icon.png / splash.png / adaptive-icon.png assets/ klasöründe mevcut
-- [ ] Ekran görüntüleri tamamlandı (`6.9-framed/` içinde 2 kullanılabilir + 1 yenilenecek taslak var)
+- [ ] Ekran görüntüleri V1 özelliklerine göre yenilenmeli: takip, yakınımdaki raporlar, ciddiyet rozetleri
 - [x] Apple Developer hesabı aktif → `eas build -p ios --profile production`
+- [x] iOS Build 10 App Store Connect'e yüklendi
 - [ ] Google Play Console hesabı → `eas build -p android --profile production`
 - [ ] App Store Connect / Play Console listesi yukarıdaki metinlerle dolduruldu
 - [x] Yasal URL'ler canlı doğrulandı (web Vercel deploy güncel)
