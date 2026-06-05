@@ -15,12 +15,23 @@ const upload = multer({
   },
 });
 
+// Uzantı ve contentType, istemcinin bildirdiği değil, checkImageSafe'in
+// gerçek baytlardan tespit ettiği tipten türetilir (F-004, F-007).
+const MIME_EXT = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heic',
+};
+
 async function uploadToBlob(file) {
-  const ext = file.originalname.split('.').pop() || 'jpg';
+  const mime = file.detectedMime || 'image/jpeg';
+  const ext = MIME_EXT[mime] || 'jpg';
   const filename = `reports/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const blob = await put(filename, file.buffer, {
     access: 'public',
-    contentType: file.mimetype,
+    contentType: mime,
   });
   return { url: blob.url, pathname: blob.pathname };
 }

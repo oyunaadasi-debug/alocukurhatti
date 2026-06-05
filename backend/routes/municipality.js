@@ -2,9 +2,45 @@ const express = require('express');
 const router = express.Router();
 const https = require('https');
 const http = require('http');
+const dns = require('dns').promises;
+const net = require('net');
 const { body, param, validationResult } = require('express-validator');
 const pool = require('../db/pool');
 const { requireAuth, requireRole } = require('../middleware/auth');
+
+// SSRF koruması: özel/iç ağ IP'lerini tespit et (F-002).
+function isPrivateIp(ip) {
+  if (net.isIPv4(ip)) {
+    const p = ip.split('.').map(Number);
+    if (p[0] === 10) return true;
+    if (p[0] === 127) return true;
+    if (p[0] === 0) return true;
+    if (p[0] === 169 && p[1] === 254) return true;        // link-local / bulut metadata
+    if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+    if (p[0] === 192 && p[1] === 168) return true;
+    if (p[0] === 100 && p[1] >= 64 && p[1] <= 127) return true; // CGNAT
+    return false;
+  }
+  const low = ip.toLowerCase();
+  if (low === '::1' || low === '::') return true;
+  if (low.startsWith('fc') || low.startsWith('fd')) return true;  // ULA
+  if (low.startsWith('fe80')) return true;                        // link-local
+  if (low.startsWith('::ffff:')) return isPrivateIp(low.slice(7)); // IPv4-mapped
+  return false;
+}
+
+// Webhook URL'sini doğrula: yalnızca https + herkese açık IP. SSRF'i engeller.
+async function assertSafeWebhookUrl(rawUrl) {
+  let url;
+  try { url = new URL(rawUrl); } catch { throw new Error('Geçersiz URL'); }
+  if (url.protocol !== 'https:') throw new Error('Yalnızca https webhook adreslerine izin verilir.');
+  const addrs = await dns.lookup(url.hostname, { all: true });
+  if (!addrs.length) throw new Error('Adres çözümlenemedi.');
+  for (const a of addrs) {
+    if (isPrivateIp(a.address)) throw new Error('İç/özel ağ adreslerine webhook tanımlanamaz.');
+  }
+  return url;
+}
 
 // Webhook gönderici — belediyenin endpoint'ine POST atar
 async function sendWebhook(webhookUrl, payload) {
@@ -62,6 +98,13 @@ router.post('/forward/:reportId', requireAuth, requireRole('admin', 'municipalit
 
     const webhook = webhookRows[0];
 
+    // Gönderim anında da doğrula (kayıt sonrası DNS değişimi/rebinding'e karşı).
+    try {
+      await assertSafeWebhookUrl(webhook.endpoint_url);
+    } catch (e) {
+      return res.status(400).json({ error: `Webhook adresi güvenli değil: ${e.message}` });
+    }
+
     // Belediyeye gönderilecek payload
     const payload = {
       source: 'alocukurhatti',
@@ -91,7 +134,7 @@ router.post('/forward/:reportId', requireAuth, requireRole('admin', 'municipalit
         `INSERT INTO municipality_log (report_id, webhook_id, success, error_message) VALUES ($1, $2, false, $3)`,
         [reportId, webhook.id, result.error || String(result.status)]
       );
-      res.status(502).json({ error: 'Belediye webhook\'u yanıt vermedi.', detail: result });
+      res.status(502).json({ error: 'Belediye webhook\'u yanıt vermedi.' });
     }
   } catch (err) {
     console.error(err);
@@ -110,10 +153,16 @@ router.get('/webhooks', requireAuth, requireRole('admin'), async (req, res) => {
 // POST /api/municipality/webhooks — yeni belediye webhook ekle
 router.post('/webhooks', requireAuth, requireRole('admin'), [
   body('city').isString().trim().notEmpty(),
-  body('endpoint_url').isURL(),
+  body('endpoint_url').isURL({ protocols: ['https'], require_protocol: true }),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  try {
+    await assertSafeWebhookUrl(req.body.endpoint_url);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
 
   try {
     const { rows } = await pool.query(

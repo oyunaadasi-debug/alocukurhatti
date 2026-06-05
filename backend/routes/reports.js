@@ -472,7 +472,9 @@ router.post('/:id/flag', param('id').isInt(), async (req, res) => {
     const { rows } = await pool.query('SELECT COUNT(*) AS flag_count FROM report_flags WHERE report_id = $1', [id]);
     const flagCount = parseInt(rows[0].flag_count);
 
-    if (flagCount >= 3) {
+    // Otomatik gizleme eşiği yüksek tutulur; az sayıda IP ile meşru raporun
+    // sansürlenmesini zorlaştırır (F-003). Daha güçlü çözüm: kimlik doğrulamalı/CAPTCHA'lı flag.
+    if (flagCount >= 10) {
       await pool.query(
         `UPDATE reports SET moderation_status = 'flagged' WHERE id = $1 AND moderation_status = 'approved'`,
         [id]

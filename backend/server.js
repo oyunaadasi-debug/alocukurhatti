@@ -22,7 +22,20 @@ const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
 app.use(helmet());
-app.use(cors());
+
+// CORS: web istemcisi allowlist; mobil/native istekler Origin başlığı
+// göndermez → onlara izin ver (F-005).
+const allowedOrigins = [
+  process.env.WEB_URL,
+  'https://web-ten-kappa-37.vercel.app',
+].filter(Boolean);
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: izin verilmeyen origin'));
+  },
+}));
+
 app.use(express.json());
 
 const reportLimiter = rateLimit({ windowMs: 60_000, max: 5, message: { error: 'Çok fazla istek. Lütfen bekleyin.' } });
