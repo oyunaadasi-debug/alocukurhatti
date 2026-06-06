@@ -31,8 +31,9 @@ const allowedOrigins = [
 ].filter(Boolean);
 app.use(cors({
   origin(origin, cb) {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error('CORS: izin verilmeyen origin'));
+    // İzinliyse CORS header'ı ekle; değilse hata fırlatma (500 yerine) — sadece
+    // ACAO header'ı eklenmez, tarayıcı cross-origin okumayı yine engeller.
+    cb(null, !origin || allowedOrigins.includes(origin));
   },
 }));
 
