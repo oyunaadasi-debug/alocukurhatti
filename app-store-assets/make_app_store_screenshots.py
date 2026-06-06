@@ -10,7 +10,7 @@ WHITE = (255, 255, 255)
 FONT_BOLD = r"C:\Windows\Fonts\seguibl.ttf"
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "ekrangor"
+SRC = ROOT / "ekrangoruntuleri"
 OUT_69 = ROOT / "app-store-assets" / "screenshots" / "6.9-framed"
 OUT_65 = ROOT / "app-store-assets" / "screenshots" / "6.5-framed"
 
@@ -23,40 +23,40 @@ THEMES = {
 # SHOTS configuration: (source_img, dest_img, theme, headlines, crop_top, tilt_direction, badge_text)
 SHOTS = [
     (
-        "photo_2026-05-31_04-26-22 (3).jpg",
+        "IMG_2583.PNG",
         "00-ana-sayfa.png",
         "mint",
-        [[("Yoldaki tüm çukurları", False)], [("haritadan takip edin", True)]],
-        78,
+        [[("Yoldaki çukurları", False)], [("tek dokunuşla bildir", True)]],
+        60,
         "right",
-        "Sorun Çözüldü!"
+        "Hızlı Bildirim"
     ),
     (
-        "photo_2026-05-31_04-26-22 (2).jpg",
-        "01-cukur-bildir.png",
-        "mint",
-        [[("Çukuru fotoğrafla", False)], [("saniyeler içinde bildir", True)]],
-        78,
-        "left",
-        "Konum Algılandı"
-    ),
-    (
-        "photo_2026-05-31_04-26-22.jpg",
-        "02-siralama.png",
+        "IMG_2584.PNG",
+        "01-harita.png",
         "blue",
-        [[("Şehrindeki sorunları", False)], [("şeffafça takip et", True)]],
-        78,
-        "right",
-        "Aktif Belediyeler"
+        [[("Tüm yol hasarları", False)], [("haritada tek yerde", True)]],
+        60,
+        "left",
+        "Canlı Harita"
     ),
     (
-        "photo_2026-05-31_04-26-21.jpg",
-        "03-hesap-olustur.png",
+        "IMG_2585.PNG",
+        "02-siralama.png",
         "amber",
-        [[("Raporlarını takip et", False)], [("çözülünce haberdar ol", True)]],
-        92,
+        [[("Belediyeleri", False)], [("şeffafça karşılaştır", True)]],
+        60,
+        "right",
+        "Şeffaf Sıralama"
+    ),
+    (
+        "IMG_2586.PNG",
+        "03-giris.png",
+        "mint",
+        [[("Saniyeler içinde", False)], [("ücretsiz başla", True)]],
+        60,
         "left",
-        "Güvenli Giriş"
+        "Üyeliksiz Kullan"
     ),
 ]
 
@@ -144,130 +144,46 @@ def draw_headline(canvas, lines, font, accent):
 def make(source, destination, theme_name, lines, crop_top, tilt, badge_text, font):
     color_a, color_b, accent = THEMES[theme_name]
     background = diagonal_gradient(color_a, color_b).convert("RGBA")
-    background = soft_circle(background, 120, 470, 230, accent, 46)
-    background = soft_circle(background, W - 90, 360, 150, WHITE, 150)
-    background = soft_circle(background, W - 120, H - 360, 260, accent, 38)
+    background = soft_circle(background, 120, 470, 230, accent, 34)
+    background = soft_circle(background, W - 90, 360, 150, WHITE, 120)
+    background = soft_circle(background, W - 120, H - 360, 260, accent, 26)
 
     # Load and crop screenshot
     shot = Image.open(source).convert("RGB")
     shot = shot.crop((0, crop_top, shot.width, shot.height))
-    screen_width = 880
+
+    # Flat, straight phone — normal size, centered (no 3D perspective).
+    screen_width = 940
     screen_height = round(screen_width / (shot.width / shot.height))
     shot = shot.resize((screen_width, screen_height), Image.Resampling.LANCZOS)
 
-    # Flat mockup measurements
-    bezel = 26
-    body_width, body_height = screen_width + 2 * bezel, screen_height + 2 * bezel
-    padding = 100
-    temp_w, temp_h = body_width + 2 * padding, body_height + 2 * padding
-
-    # Temporary canvas for drawing flat phone
-    temp_canvas = Image.new("RGBA", (temp_w, temp_h), (0, 0, 0, 0))
-    draw_temp = ImageDraw.Draw(temp_canvas)
-
-    # Soft shadow on temp canvas
-    shadow_offset = 30
-    draw_temp.rounded_rectangle(
-        [padding, padding + shadow_offset, padding + body_width, padding + body_height + shadow_offset],
-        92,
-        fill=(15, 15, 18, 90),
-    )
-    temp_canvas = Image.alpha_composite(temp_canvas, temp_canvas.filter(ImageFilter.GaussianBlur(32)))
-    draw_temp = ImageDraw.Draw(temp_canvas)
-
-    # Draw phone body
-    draw_temp.rounded_rectangle(
-        [padding, padding, padding + body_width, padding + body_height],
-        92,
-        fill=BODY
-    )
-
-    # Paste screenshot
-    shot_rounded = rounded(shot, 62)
-    temp_canvas.paste(shot_rounded, (padding + bezel, padding + bezel), shot_rounded)
-
-    # Calculate 3D perspective coordinates on background
+    bezel = 24
+    body_width = screen_width + 2 * bezel
+    body_height = screen_height + 2 * bezel
     body_x = (W - body_width) // 2
-    body_y = 820
+    body_y = 690
 
-    dx0, dy0 = body_x - padding, body_y - padding
-    dx1, dy1 = body_x + body_width + padding, body_y - padding
-    dx2, dy2 = body_x + body_width + padding, body_y + body_height + padding
-    dx3, dy3 = body_x - padding, body_y + body_height + padding
-
-    src_pts = [
-        (0, 0),
-        (temp_w, 0),
-        (temp_w, temp_h),
-        (0, temp_h)
-    ]
-
-    if tilt == "right":
-        dst_pts = [
-            (dx0 + 160, dy0 + 140), # TL
-            (dx1 - 40, dy1 - 10),   # TR
-            (dx2 - 140, dy2 - 150), # BR
-            (dx3 + 60, dy3 + 60)    # BL
-        ]
-    else:  # left tilt
-        dst_pts = [
-            (dx0 + 50, dy0 - 10),   # TL
-            (dx1 - 160, dy1 + 140), # TR
-            (dx2 - 60, dy2 + 60),   # BR
-            (dx3 + 140, dy3 - 150)  # BL
-        ]
-
-    coeffs = get_perspective_coeffs(src_pts, dst_pts)
-    warped_phone = temp_canvas.transform((W, H), Image.PERSPECTIVE, coeffs, Image.BICUBIC)
-
-    # Paste warped phone onto background
-    background = Image.alpha_composite(background, warped_phone)
-
-    # Draw floating glassmorphic badge
-    badge_w, badge_h = 420, 160
-    if tilt == "right":
-        badge_x, badge_y = 120, H - 750
-    else:
-        badge_x, badge_y = W - badge_w - 120, H - 750
-
-    badge_canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    draw_badge = ImageDraw.Draw(badge_canvas)
-
-    # Badge shadow
-    draw_badge.rounded_rectangle(
-        [badge_x + 10, badge_y + 15, badge_x + badge_w + 10, badge_y + badge_h + 15],
-        36,
-        fill=(0, 0, 0, 45)
+    # Soft straight drop shadow
+    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [body_x, body_y + 28, body_x + body_width, body_y + body_height + 28],
+        96,
+        fill=(15, 15, 18, 95),
     )
-    badge_canvas = Image.alpha_composite(badge_canvas, badge_canvas.filter(ImageFilter.GaussianBlur(16)))
-    draw_badge = ImageDraw.Draw(badge_canvas)
+    background = Image.alpha_composite(background, shadow.filter(ImageFilter.GaussianBlur(36)))
 
-    # Badge container (semi-transparent glass card)
-    draw_badge.rounded_rectangle(
-        [badge_x, badge_y, badge_x + badge_w, badge_y + badge_h],
-        36,
-        fill=(255, 255, 255, 235),
-        outline=WHITE + (255,),
-        width=4
+    # Phone body
+    body = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(body).rounded_rectangle(
+        [body_x, body_y, body_x + body_width, body_y + body_height], 96, fill=BODY
     )
+    background = Image.alpha_composite(background, body)
 
-    # Badge text
-    try:
-        font_b = ImageFont.truetype(FONT_BOLD, 42)
-    except:
-        font_b = ImageFont.load_default()
+    # Screenshot inside the bezel
+    shot_rounded = rounded(shot, 60)
+    background.paste(shot_rounded, (body_x + bezel, body_y + bezel), shot_rounded)
 
-    # Center text inside the card
-    text_bbox = draw_badge.textbbox((0, 0), badge_text, font=font_b)
-    text_w = text_bbox[2] - text_bbox[0]
-    text_h = text_bbox[3] - text_bbox[1]
-    tx = badge_x + (badge_w - text_w) // 2
-    ty = badge_y + (badge_h - text_h) // 2 - 8 # slight visual adjustment
-
-    draw_badge.text((tx, ty), badge_text, font=font_b, fill=accent)
-    background = Image.alpha_composite(background, badge_canvas)
-
-    # Draw headline text
+    # Headline text (top)
     draw_headline(background, lines, font, accent)
 
     # Save to destination
