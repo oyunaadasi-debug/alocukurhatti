@@ -21,6 +21,8 @@ const SEVERITIES = [
   { key: 'dangerous', icon: 'warning-outline', hint: 'Tehlikeli' },
 ];
 
+const PHOTO_PICKER_QUALITY = 0.55;
+
 export default function AddReportScreen({ route, navigation }: any) {
   const passedLoc = route?.params?.userLocation;
 
@@ -103,7 +105,7 @@ export default function AddReportScreen({ route, navigation }: any) {
         );
         return;
       }
-      const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+      const r = await ImagePicker.launchCameraAsync({ quality: PHOTO_PICKER_QUALITY, exif: false });
       if (!r.canceled) setPhoto(r.assets[0].uri);
     } catch (e) {
       Alert.alert('Hata', 'Kamera açılamadı. Lütfen tekrar deneyin.');
@@ -124,7 +126,7 @@ export default function AddReportScreen({ route, navigation }: any) {
         );
         return;
       }
-      const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      const r = await ImagePicker.launchImageLibraryAsync({ quality: PHOTO_PICKER_QUALITY, exif: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
       if (!r.canceled) setPhoto(r.assets[0].uri);
     } catch (e) {
       Alert.alert('Hata', 'Galeri açılamadı. Lütfen tekrar deneyin.');

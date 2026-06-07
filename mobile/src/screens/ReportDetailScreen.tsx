@@ -15,6 +15,8 @@ import { StatusBadge, MetaRow, SectionTitle, Divider } from '../components/ui';
 import { API_URL, WEB_URL } from '../config';
 import { belediyeFor, buildComplaintText, issueLabel, issueIcon, CIMER_URL, ALO_153 } from '../data/belediyeler';
 
+const PHOTO_PICKER_QUALITY = 0.55;
+
 // İki tarih arası süreyi Türkçe metne çevir (çözüm süresi için)
 function durationText(fromIso: string, toIso: string): string {
   const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
@@ -172,7 +174,7 @@ export default function ReportDetailScreen({ route, navigation }: any) {
             );
             return;
           }
-          const r = await ImagePicker.launchCameraAsync({ quality: 0.85 });
+          const r = await ImagePicker.launchCameraAsync({ quality: PHOTO_PICKER_QUALITY, exif: false });
           if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
         } catch (e) {
           Alert.alert('Hata', 'Kamera açılamadı. Lütfen tekrar deneyin.');
@@ -192,7 +194,7 @@ export default function ReportDetailScreen({ route, navigation }: any) {
             );
             return;
           }
-          const r = await ImagePicker.launchImageLibraryAsync({ quality: 0.85, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+          const r = await ImagePicker.launchImageLibraryAsync({ quality: PHOTO_PICKER_QUALITY, exif: false, mediaTypes: ImagePicker.MediaTypeOptions.Images });
           if (!r.canceled) postUpdate('resolution_proof', r.assets[0].uri);
         } catch (e) {
           Alert.alert('Hata', 'Galeri açılamadı. Lütfen tekrar deneyin.');
