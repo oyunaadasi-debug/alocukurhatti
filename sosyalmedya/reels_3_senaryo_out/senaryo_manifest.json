@@ -1,0 +1,44 @@
+{
+  "01_30_saniyede_ihbar": {
+    "reel": "sosyalmedya/reels_3_senaryo_out/reels/reels_01_30_saniyede_ihbar.mp4",
+    "canva_png": "sosyalmedya/reels_3_senaryo_out/canva/canva_01_30_saniyede_ihbar.png",
+    "canva_html": "sosyalmedya/reels_3_senaryo_out/canva/canva_01_30_saniyede_ihbar.html",
+    "frames": [
+      "sosyalmedya/reels_3_senaryo_out/frames/01_30_saniyede_ihbar/frame_01.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/01_30_saniyede_ihbar/frame_02.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/01_30_saniyede_ihbar/frame_03.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/01_30_saniyede_ihbar/frame_04.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/01_30_saniyede_ihbar/frame_05.png"
+    ],
+    "voiceover": "Yolda bir çukur gördüğünde artık sadece söylenmek zorunda değilsin. Alo Çukur Hattı'nı aç, fotoğrafını çek, konumu kontrol et ve gönder. Rapor haritada görünür olur, aynı sorunu görenler destek verebilir. Alo Çukur Hattı App Store'da.",
+    "caption": "Yol hasarını gördüğün anda bildir. Alo Çukur Hattı App Store'da."
+  },
+  "02_mahalle_haritasi": {
+    "reel": "sosyalmedya/reels_3_senaryo_out/reels/reels_02_mahalle_haritasi.mp4",
+    "canva_png": "sosyalmedya/reels_3_senaryo_out/canva/canva_02_mahalle_haritasi.png",
+    "canva_html": "sosyalmedya/reels_3_senaryo_out/canva/canva_02_mahalle_haritasi.html",
+    "frames": [
+      "sosyalmedya/reels_3_senaryo_out/frames/02_mahalle_haritasi/frame_01.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/02_mahalle_haritasi/frame_02.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/02_mahalle_haritasi/frame_03.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/02_mahalle_haritasi/frame_04.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/02_mahalle_haritasi/frame_05.png"
+    ],
+    "voiceover": "Bir yol hasarı kayda girmediğinde herkes için görünmez kalır. Alo Çukur Hattı ile o sorun haritada tek noktaya dönüşür. Mahalleli aynı rapora destek verir, süreç takip edilir. Şehrin için küçük ama görünür bir adım at.",
+    "caption": "Mahallendeki yol sorunlarını haritada görünür yap."
+  },
+  "03_gece_surusu": {
+    "reel": "sosyalmedya/reels_3_senaryo_out/reels/reels_03_gece_surusu.mp4",
+    "canva_png": "sosyalmedya/reels_3_senaryo_out/canva/canva_03_gece_surusu.png",
+    "canva_html": "sosyalmedya/reels_3_senaryo_out/canva/canva_03_gece_surusu.html",
+    "frames": [
+      "sosyalmedya/reels_3_senaryo_out/frames/03_gece_surusu/frame_01.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/03_gece_surusu/frame_02.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/03_gece_surusu/frame_03.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/03_gece_surusu/frame_04.png",
+      "sosyalmedya/reels_3_senaryo_out/frames/03_gece_surusu/frame_05.png"
+    ],
+    "voiceover": "Gündüz gördüğün küçük bir çukur, gece bir sürücü için büyük tehlikeye dönüşebilir. Alo Çukur Hattı ile gördüğün yol hasarını fotoğrafla bildir. Konumu işaretle, haritada görünür yap. Bugün bildirdiğin bir çukur, yarın bir kazayı önleyebilir.",
+    "caption": "Bugün bildirdiğin bir çukur, yarın bir kazayı önleyebilir."
+  }
+}
