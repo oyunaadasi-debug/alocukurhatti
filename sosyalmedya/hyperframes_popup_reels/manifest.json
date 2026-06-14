@@ -1,0 +1,15 @@
+{
+  "title": "Nasıl Kullanılır Popup Reels",
+  "source": "sosyalmedya/hyperframes_popup_reels/01_nasil_kullanilir_popup.html",
+  "video": "sosyalmedya/hyperframes_popup_reels/01_nasil_kullanilir_popup.mp4",
+  "poster": "sosyalmedya/hyperframes_popup_reels/01_nasil_kullanilir_popup_poster.png",
+  "format": {
+    "width": 1080,
+    "height": 1920,
+    "capture_fps": 16,
+    "output_fps": 30,
+    "duration": 18
+  },
+  "voiceover": "Yoldaki çukuru gördün mü? Alo Çukur Hattı'nı App Store'dan indir. Fotoğrafını çek, konumunu kontrol et, şikayetini oluştur. Sorun haritada görünür olsun.",
+  "caption": "İndir, fotoğrafını çek, konumunu onayla, şikayetini oluştur. Alo Çukur Hattı App Store'da."
+}
