@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1080,height=1920,initial-scale=1">
+<title>Alo Çukur Hattı — Hikaye Tanıtım</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
+    background: #070707;
+    color: #fff;
+  }
+  .story {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 78% 7%, rgba(229, 57, 53, .42), transparent 30%),
+      radial-gradient(circle at 16% 50%, rgba(31, 169, 139, .20), transparent 32%),
+      linear-gradient(180deg, #101010 0%, #050505 58%, #090909 100%);
+  }
+  .grid {
+    position: absolute;
+    inset: 0;
+    opacity: .16;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+  }
+  .road {
+    position: absolute;
+    left: -120px;
+    right: -120px;
+    bottom: -130px;
+    height: 560px;
+    transform: skewY(-8deg);
+    background: linear-gradient(135deg, #141414, #050505 58%, #151515);
+    border-top: 2px solid rgba(255,255,255,.08);
+    box-shadow: 0 -40px 120px rgba(0,0,0,.75);
+  }
+  .road:after {
+    content: "";
+    position: absolute;
+    left: 180px;
+    right: 180px;
+    top: 180px;
+    height: 10px;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.32) 0 90px, transparent 90px 165px);
+    border-radius: 99px;
+  }
+  .top {
+    position: absolute;
+    top: 72px;
+    left: 64px;
+    right: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    height: 54px;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: rgba(229,57,53,.16);
+    border: 1px solid rgba(255,107,107,.42);
+    color: #ff6b6b;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .badge-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ff4747;
+    box-shadow: 0 0 18px #ff4747;
+  }
+  .handle {
+    color: rgba(255,255,255,.82);
+    font-size: 25px;
+    font-weight: 800;
+  }
+  h1 {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    top: 160px;
+    font-size: 96px;
+    line-height: .96;
+    letter-spacing: -4px;
+    font-weight: 950;
+  }
+  h1 .red { color: #ff4040; }
+  .lead {
+    position: absolute;
+    left: 68px;
+    right: 430px;
+    top: 470px;
+    color: rgba(255,255,255,.78);
+    font-size: 30px;
+    line-height: 1.36;
+    font-weight: 500;
+  }
+  .lead b { color: #fff; font-weight: 900; }
+  .phone-wrap {
+    position: absolute;
+    right: 42px;
+    top: 432px;
+    width: 410px;
+    height: 650px;
+    transform: rotate(5deg);
+    filter: drop-shadow(0 42px 70px rgba(0,0,0,.68));
+  }
+  .phone-wrap:before {
+    content: "";
+    position: absolute;
+    inset: 48px 34px;
+    border-radius: 56px;
+    background: rgba(31,169,139,.22);
+    filter: blur(40px);
+  }
+  .phone-wrap img {
+    position: relative;
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .steps {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    top: 1095px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    align-items: center;
+    min-height: 118px;
+    padding: 24px 28px;
+    border-radius: 30px;
+    background: rgba(255,255,255,.075);
+    border: 1px solid rgba(255,255,255,.13);
+    backdrop-filter: blur(16px);
+  }
+  .num {
+    width: 58px;
+    height: 58px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #111;
+    font-size: 26px;
+    font-weight: 950;
+  }
+  .step h2 {
+    font-size: 32px;
+    line-height: 1.05;
+    font-weight: 950;
+    letter-spacing: -.6px;
+  }
+  .step p {
+    margin-top: 8px;
+    color: rgba(255,255,255,.70);
+    font-size: 21px;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+  .cta {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 92px;
+    min-height: 250px;
+    padding: 34px;
+    border-radius: 36px;
+    background: linear-gradient(135deg, #ff4040 0%, #d42121 100%);
+    box-shadow: 0 34px 90px rgba(229,57,53,.35);
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 22px;
+    align-items: center;
+  }
+  .cta-kicker {
+    color: rgba(255,255,255,.78);
+    font-size: 18px;
+    font-weight: 950;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .cta-title {
+    margin-top: 10px;
+    font-size: 46px;
+    line-height: 1.02;
+    font-weight: 950;
+    letter-spacing: -1.5px;
+  }
+  .links {
+    display: grid;
+    gap: 13px;
+  }
+  .link-pill {
+    min-height: 70px;
+    border-radius: 24px;
+    background: #fff;
+    color: #111;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 21px;
+    font-size: 20px;
+    font-weight: 950;
+    box-shadow: 0 12px 26px rgba(0,0,0,.18);
+  }
+  .link-pill.dark {
+    background: rgba(0,0,0,.28);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.22);
+  }
+  .icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: rgba(0,0,0,.10);
+    font-size: 21px;
+  }
+  .fine {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 38px;
+    color: rgba(255,255,255,.44);
+    font-size: 18px;
+    text-align: center;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<main class="story">
+  <div class="grid"></div>
+  <div class="road"></div>
+
+  <div class="top">
+    <div class="badge"><span class="badge-dot"></span> Ücretsiz Yayında</div>
+    <div class="handle">@alocukurhatti</div>
+  </div>
+
+  <h1>Yoldaki<br>çukuru artık<br><span class="red">bildiriyorsun.</span></h1>
+
+  <p class="lead">
+    Alo Çukur Hattı ile yol hasarını <b>fotoğrafla</b>, konumunu işaretle ve herkesin görebileceği haritaya ekle.
+  </p>
+
+  <div class="phone-wrap">
+    <img src="../app-store-assets/screenshots/6.5-framed/01-harita.png" alt="Alo Çukur Hattı harita ekranı">
+  </div>
+
+  <section class="steps">
+    <article class="step">
+      <div class="num">1</div>
+      <div>
+        <h2>Fotoğraf çek</h2>
+        <p>Çukur, bozuk yol, kaldırım veya su birikintisini belgeleyin.</p>
+      </div>
+    </article>
+    <article class="step">
+      <div class="num">2</div>
+      <div>
+        <h2>Konumu pinle</h2>
+        <p>GPS ile otomatik al, gerekirse haritada noktasını düzelt.</p>
+      </div>
+    </article>
+    <article class="step">
+      <div class="num">3</div>
+      <div>
+        <h2>Haritada görünür yap</h2>
+        <p>Aynı sorunu görenler destek versin, rapor takip edilsin.</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="cta">
+    <div>
+      <div class="cta-kicker">Hemen indir</div>
+      <div class="cta-title">İlk raporunu<br>bugün gönder.</div>
+    </div>
+    <div class="links">
+      <div class="link-pill"><span class="icon">↓</span> apps.apple.com/app/id6775084979</div>
+      <div class="link-pill dark"><span class="icon">@</span> instagram: @alocukurhatti</div>
+    </div>
+  </section>
+
+  <div class="fine">Alo Çukur Hattı resmi kurum uygulaması değildir; vatandaş raporlarını görünür kılan ücretsiz sivil platformdur.</div>
+</main>
+</body>
+</html>
