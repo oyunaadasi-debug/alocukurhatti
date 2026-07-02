@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase';
 
 export default function GirisPage() {
   const [email, setEmail] = useState('');
@@ -13,14 +14,8 @@ export default function GirisPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Giriş başarısız');
-      localStorage.setItem('token', data.token);
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message);

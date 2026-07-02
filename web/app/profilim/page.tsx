@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { supabase } from '@/lib/supabase';
 
 type Report = {
   id: number;
@@ -19,7 +18,7 @@ type Report = {
   created_at: string;
 };
 
-type User = { id: number; email: string; name: string | null; role: string };
+type User = { id: string; email: string; name: string | null; role: string };
 
 const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
   open:       { label: 'Açık',        color: '#E53935', bg: '#FFF0F0' },
@@ -48,28 +47,35 @@ export default function ProfilimPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/giris');
-      return;
-    }
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) {
+        router.replace('/giris');
+        return;
+      }
 
-    fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data?.id) { router.replace('/giris'); return; }
-        setUser(data);
-        return fetch(`${API}/api/reports/my`, { headers: { Authorization: `Bearer ${token}` } });
-      })
-      .then(r => r ? (r.ok ? r.json() : Promise.reject('fetch failed')) : null)
-      .then(data => {
-        if (data?.reports) setReports(data.reports);
-        setLoading(false);
-      })
-      .catch(() => {
+      const userProfile: User = {
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.user_metadata?.name || null,
+        role: session.user.user_metadata?.role || 'citizen',
+      };
+      setUser(userProfile);
+
+      try {
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('moderation_status', 'approved')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setReports(data || []);
+      } catch (err) {
         setError('Şikayetler yüklenirken bir hata oluştu.');
+      } finally {
         setLoading(false);
-      });
+      }
+    });
   }, [router]);
 
   return (

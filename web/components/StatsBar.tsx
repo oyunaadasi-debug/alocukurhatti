@@ -1,11 +1,15 @@
 'use client';
 import useSWR from 'swr';
+import { supabase } from '../lib/supabase';
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-const API = process.env.NEXT_PUBLIC_API_URL;
+const fetcher = async () => {
+  const { data, error } = await supabase.from('stats_by_city').select('*');
+  if (error) throw error;
+  return { cities: data || [] };
+};
 
 export default function StatsBar() {
-  const { data } = useSWR(`${API}/api/stats/cities`, fetcher, { refreshInterval: 30000 });
+  const { data } = useSWR('stats_by_city', fetcher, { refreshInterval: 30000 });
 
   const totalOpen = data?.cities?.reduce((s: number, c: any) => s + parseInt(c.open_count || 0), 0) ?? '…';
   const totalResolved = data?.cities?.reduce((s: number, c: any) => s + parseInt(c.resolved_count || 0), 0) ?? '…';

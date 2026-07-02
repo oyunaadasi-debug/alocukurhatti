@@ -1,12 +1,11 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import { MapContainer, TileLayer, CircleMarker, Popup, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import useSWR from 'swr';
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { supabase } from '../lib/supabase';
 
 const ISSUE_TYPES = [
   { key: 'cukur', emoji: '🕳️', label: 'Çukur' },
@@ -87,12 +86,12 @@ function ReportPanel({
 
   // Giriş yapılmışsa ismi doldur
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.name) setName(d.name); else if (d?.email) setName(d.email.split('@')[0]); })
-      .catch(() => {});
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const nameVal = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '';
+        setName(nameVal);
+      }
+    });
   }, []);
 
   function pickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -108,23 +107,46 @@ function ReportPanel({
     setSending(true);
     setError('');
     try {
-      const fd = new FormData();
-      fd.append('photo', photo);
-      fd.append('lat', String(pos[0]));
-      fd.append('lng', String(pos[1]));
-      if (desc.trim()) fd.append('description', desc.trim());
-      if (name.trim()) fd.append('reporter_name', name.trim());
-      fd.append('issue_type', issueType);
+      // 1. Upload to Supabase Storage
+      const fileExt = photo.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
 
-      const token = localStorage.getItem('token');
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(filePath, photo, {
+          contentType: photo.type || 'image/jpeg',
+        });
+      if (uploadError) throw uploadError;
 
-      const res = await fetch(`${API}/api/reports`, { method: 'POST', headers, body: fd });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Gönderim başarısız.');
-      }
+      // 2. Get public url
+      const { data: { publicUrl } } = supabase.storage
+        .from('reports')
+        .getPublicUrl(filePath);
+
+      // 3. Get user session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+
+      // 4. Insert report
+      const { error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          lat: pos[0],
+          lng: pos[1],
+          issue_type: issueType,
+          severity: 'medium',
+          description: desc.trim() || null,
+          reporter_name: name.trim() || null,
+          photo_url: publicUrl,
+          photo_public_id: filePath,
+          user_id: userId,
+          status: 'open',
+          moderation_status: 'approved',
+        });
+
+      if (insertError) throw insertError;
+
       setDone(true);
       setTimeout(() => { onSuccess(); }, 2000);
     } catch (err: any) {
@@ -340,8 +362,18 @@ export default function MapView() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, mutate } = useSWR(
-    `${API}/api/reports?status=${filter}`,
-    fetcher,
+    ['reports', filter],
+    async () => {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('moderation_status', 'approved')
+        .eq('status', filter)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return { reports: data || [] };
+    },
     { refreshInterval: 60000 }
   );
   const reports = data?.reports || [];
@@ -407,12 +439,21 @@ export default function MapView() {
     if (cityName) {
       setCityStatsLoading(true);
       try {
-        const res = await fetch(`${API}/api/stats/cities/${encodeURIComponent(cityName)}`);
-        const data = await res.json();
-        if (parseInt(data.summary?.total_count) > 0 || data.districts?.length > 0) {
-          setCityStats(data);
+        const [cityRes, districtRes] = await Promise.all([
+          supabase.from('stats_by_city').select('*').ilike('city', cityName).maybeSingle(),
+          supabase.from('stats_by_district').select('*').ilike('city', cityName).order('open_count', { ascending: false }),
+        ]);
+
+        if (cityRes.data || (districtRes.data && districtRes.data.length > 0)) {
+          setCityStats({
+            city: cityName,
+            summary: cityRes.data || { open_count: 0, resolved_count: 0, total_count: 0, total_metoo: 0 },
+            districts: districtRes.data || [],
+          });
         }
-      } catch { /* no stats */ } finally {
+      } catch (err) {
+        console.error(err);
+      } finally {
         setCityStatsLoading(false);
       }
     }
@@ -732,8 +773,9 @@ export default function MapView() {
             <Popup>
               <div style={{ minWidth: 200 }}>
                 {r.photo_url && (
-                  <img src={r.photo_url} alt="Çukur"
-                    style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }}
+                  <Image src={r.photo_url} alt="Çukur"
+                    width={200} height={120}
+                    style={{ objectFit: 'cover', borderRadius: 8, marginBottom: 8 }}
                   />
                 )}
                 <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
@@ -747,9 +789,27 @@ export default function MapView() {
                   <button
                     onClick={async () => {
                       try {
-                        const res2 = await fetch(`${API}/api/reports/${r.id}/metoo`, { method: 'POST' });
-                        if (res2.ok) mutate();
-                      } catch {}
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const userId = session?.user?.id || null;
+
+                        // 1. Insert me_too log
+                        const { error: meTooErr } = await supabase.from('me_too').insert({
+                          report_id: r.id,
+                          user_id: userId,
+                        });
+                        if (meTooErr) throw meTooErr;
+
+                        // 2. Increment me_too_count
+                        const { error: updateErr } = await supabase
+                          .from('reports')
+                          .update({ me_too_count: (r.me_too_count || 0) + 1 })
+                          .eq('id', r.id);
+                        if (updateErr) throw updateErr;
+
+                        mutate();
+                      } catch (err) {
+                        console.error(err);
+                      }
                     }}
                     style={{ background: '#FFF0F0', border: 'none', borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 600, color: '#E53935', cursor: 'pointer' }}
                   >

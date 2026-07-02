@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { supabase } from '../lib/supabase';
 
 const NAV = [
   { href: '/', label: 'Harita' },
@@ -12,7 +11,7 @@ const NAV = [
   { href: '/investor', label: 'Yatırımcılar' },
 ];
 
-type User = { id: number; email: string; name: string | null; role: string };
+type User = { id: string; email: string; name: string | null; role: string };
 
 export default function Header() {
   const path = usePathname();
@@ -21,18 +20,37 @@ export default function Header() {
   const [dropOpen, setDropOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(`${API}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.id) setUser(data); })
-      .catch(() => {});
-  }, [path]); // path değişince yeniden kontrol et (login sonrası)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name || null,
+          role: session.user.user_metadata?.role || 'citizen',
+        });
+      } else {
+        setUser(null);
+      }
+    });
 
-  function handleLogout() {
-    localStorage.removeItem('token');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name || null,
+          role: session.user.user_metadata?.role || 'citizen',
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [path]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
     setUser(null);
     setDropOpen(false);
     router.push('/');

@@ -5,10 +5,9 @@ import {
 } from 'react-native';
 import { Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { C, R, S, elevation } from '../theme';
 import { EmptyState, Divider } from '../components/ui';
-import { API_URL } from '../config';
+import { supabase } from '../lib/supabase';
 
 type City = {
   city: string; open_count: string; resolved_count: string;
@@ -53,14 +52,30 @@ export default function LeaderboardScreen({ navigation }: any) {
     setLoading(true);
     try {
       if (tab !== 'reporters') {
-        const { data } = await axios.get(`${API_URL}/stats/cities`, { params: { sort: TAB_META[tab].sort } });
-        setCities(data.cities);
+        let query = supabase.from('stats_by_city').select('*');
+        const sort = TAB_META[tab].sort;
+        if (sort === 'supported') {
+          query = query.order('total_metoo', { ascending: false }).order('total_count', { ascending: false });
+        } else if (sort === 'fastest') {
+          query = query.order('avg_resolution_hours', { ascending: true, nullsFirst: false }).order('resolved_count', { ascending: false });
+        } else {
+          query = query.order('open_count', { ascending: false }).order('total_count', { ascending: false });
+        }
+        const { data, error } = await query;
+        if (error) throw error;
+        setCities(data || []);
       } else {
-        const { data } = await axios.get(`${API_URL}/stats/reporters`);
-        setReporters(data.reporters);
+        const { data, error } = await supabase
+          .from('stats_reporters')
+          .select('*')
+          .order('report_count', { ascending: false })
+          .order('total_metoo', { ascending: false })
+          .limit(20);
+        if (error) throw error;
+        setReporters(data || []);
       }
-    } catch {
-      // sessizce geç — boş durum gösterilir
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false); setRefreshing(false);
     }
@@ -70,8 +85,15 @@ export default function LeaderboardScreen({ navigation }: any) {
     if (expandedCity === city) { setExpanded(null); setDistricts([]); return; }
     setExpanded(city); setDrillLoad(true);
     try {
-      const { data } = await axios.get(`${API_URL}/stats/cities/${encodeURIComponent(city)}`);
-      setDistricts(data.districts);
+      const { data, error } = await supabase
+        .from('stats_by_district')
+        .select('*')
+        .ilike('city', city)
+        .order('open_count', { ascending: false });
+      if (error) throw error;
+      setDistricts(data || []);
+    } catch (err) {
+      console.error(err);
     } finally { setDrillLoad(false); }
   }
 

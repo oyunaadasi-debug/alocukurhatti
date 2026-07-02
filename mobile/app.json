@@ -26,16 +26,21 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.talha.alocukurhatti",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Sorunun konumunu otomatik tespit etmek için konum iznine ihtiyacımız var.",
-        "NSCameraUsageDescription": "Sorunun fotoğrafını çekmek için kamera iznine ihtiyacımız var.",
-        "NSPhotoLibraryUsageDescription": "Galeriden fotoğraf seçmek için izin gerekiyor.",
+        "NSLocationWhenInUseUsageDescription": "This app uses your location to automatically tag the exact spot of the road damage you report. For example, when you report a pothole, your current location is added to the report so the issue can be shown accurately on the map.",
+        "NSCameraUsageDescription": "This app uses the camera to let you take a photo of the road damage you are reporting. For example, you can take a picture of a pothole and attach it directly to your report.",
+        "NSPhotoLibraryUsageDescription": "This app lets you select a photo from your library to document a reported pothole or road damage. For example, you can attach a photo of a pothole you took earlier to your report.",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "11"
+      "buildNumber": "13"
     },
     "plugins": [
       "expo-location",
-      "expo-image-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Bildirdiğiniz yol çukurunu veya yol hasarını belgelemek için galerinizden bir fotoğraf seçmenize izin verir. Örneğin, daha önce çektiğiniz bir çukur fotoğrafını seçip raporunuza ekleyebilirsiniz."
+        }
+      ],
       [
         "expo-camera",
         {

@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { supabase } from '../lib/supabase';
 
 export default function MeTooButton({ reportId, initialCount }: { reportId: number; initialCount: number }) {
   const [count, setCount] = useState(initialCount);
@@ -12,12 +11,29 @@ export default function MeTooButton({ reportId, initialCount }: { reportId: numb
     if (voted || loading) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/reports/${reportId}/metoo`, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setCount(data.me_too_count);
-        setVoted(true);
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+
+      // 1. Insert me_too log
+      const { error: meTooErr } = await supabase.from('me_too').insert({
+        report_id: reportId,
+        user_id: userId,
+      });
+      if (meTooErr) throw meTooErr;
+
+      // 2. Increment me_too_count
+      const { data: updatedReport, error: updateErr } = await supabase
+        .from('reports')
+        .update({ me_too_count: count + 1 })
+        .eq('id', reportId)
+        .select('me_too_count')
+        .single();
+      if (updateErr) throw updateErr;
+
+      setCount(updatedReport.me_too_count);
+      setVoted(true);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }

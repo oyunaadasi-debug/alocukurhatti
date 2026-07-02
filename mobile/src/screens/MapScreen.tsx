@@ -4,10 +4,9 @@ import { Text } from '../components/AppText';
 import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
-import { API_URL } from '../config';
+import { supabase } from '../lib/supabase';
 import { ISSUE_TYPES, issueIcon, issueLabel } from '../data/belediyeler';
 
 type Report = {
@@ -62,12 +61,30 @@ export default function MapScreen({ navigation, route }: any) {
         }
       }
 
-      const { data } = await axios.get(`${API_URL}/reports`, {
-        params: { lat: !filterCity ? lat : undefined, lng: !filterCity ? lng : undefined, radius: !filterCity ? nearbyRadius : 50, city: filterCity },
-      });
-      const all: Report[] = data.reports;
+      let query = supabase
+        .from('reports')
+        .select('*')
+        .eq('moderation_status', 'approved');
+
+      if (filterCity) {
+        query = query.ilike('city', filterCity);
+      } else {
+        const radF = nearbyRadius || 50;
+        const latDelta = radF / 111.0;
+        const lngDelta = radF / (111.0 * Math.cos(lat * Math.PI / 180));
+        query = query
+          .gte('lat', lat - latDelta)
+          .lte('lat', lat + latDelta)
+          .gte('lng', lng - lngDelta)
+          .lte('lng', lng + lngDelta);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      const all: Report[] = data || [];
       setReports(filterDistrict ? all.filter(r => r.district === filterDistrict) : all);
-    } catch {
+    } catch (err) {
+      console.error(err);
       Alert.alert('Hata', 'Raporlar yüklenemedi.');
     } finally {
       setLoading(false);
@@ -93,15 +110,18 @@ export default function MapScreen({ navigation, route }: any) {
     const center = userLoc ?? { lat: region.latitude, lng: region.longitude };
     setAreaBusy(true);
     try {
-      await axios.post(`${API_URL}/notifications/areas`, {
+      const { error } = await supabase.from('area_subscriptions').insert({
+        user_id: user.id,
         lat: center.lat,
         lng: center.lng,
         radius_km: nearbyRadius,
         label: filterDistrict || filterCity || `Yakınımda ${nearbyRadius} km`,
       });
+      if (error) throw error;
       setAreaFollowed(true);
       Alert.alert('Takip başladı', `Bu bölgedeki yeni raporlar için bildirim alacaksınız.`);
-    } catch {
+    } catch (err) {
+      console.error(err);
       Alert.alert('Hata', 'Bölge takibi başlatılamadı.');
     } finally {
       setAreaBusy(false);

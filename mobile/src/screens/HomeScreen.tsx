@@ -7,9 +7,8 @@ import { Text } from '../components/AppText';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import axios from 'axios';
 import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
-import { API_URL } from '../config';
+import { supabase } from '../lib/supabase';
 import { issueLabel, issueIcon } from '../data/belediyeler';
 
 type Report = {
@@ -28,23 +27,33 @@ export default function HomeScreen({ navigation }: any) {
 
   const load = useCallback(async () => {
     try {
-      const [repRes, statRes] = await Promise.allSettled([
-        axios.get(`${API_URL}/reports`),
-        axios.get(`${API_URL}/stats/cities`),
+      const [repRes, countRes, resolvedRes] = await Promise.all([
+        supabase
+          .from('reports')
+          .select('*')
+          .eq('moderation_status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('moderation_status', 'approved'),
+        supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('moderation_status', 'approved')
+          .eq('status', 'resolved'),
       ]);
 
-      if (repRes.status === 'fulfilled') {
-        const list: Report[] = repRes.value.data.reports ?? [];
-        setReports(list);
+      if (!repRes.error) {
+        setReports(repRes.data || []);
       }
-      if (statRes.status === 'fulfilled') {
-        const cities = statRes.value.data.cities ?? [];
-        const total = cities.reduce((s: number, c: any) => s + parseInt(c.total_count || '0'), 0);
-        const resolved = cities.reduce((s: number, c: any) => s + parseInt(c.resolved_count || '0'), 0);
-        setTotals({ total, resolved });
-      }
-    } catch {
-      // sessiz — boş durum gösterilir
+      
+      const total = countRes.count || 0;
+      const resolved = resolvedRes.count || 0;
+      setTotals({ total, resolved });
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
       setRefreshing(false);

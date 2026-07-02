@@ -6,10 +6,10 @@ import {
 import { Text } from '../components/AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { C, R, S, elevation, severityColor, severityLabel, statusColor, statusLabel } from '../theme';
-import { API_URL, PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../config';
+import { PRIVACY_URL, SUPPORT_URL, TERMS_URL } from '../config';
+import { supabase } from '../lib/supabase';
 
 type MyReport = {
   id: number; address: string; city: string; district: string;
@@ -62,17 +62,37 @@ export default function ProfileScreen({ navigation }: any) {
       if (!user) return;
       let active = true;
       setLoadingReports(true);
-      Promise.allSettled([
-        axios.get(`${API_URL}/reports/my`),
-        axios.get(`${API_URL}/reports/following`),
+      Promise.all([
+        supabase
+          .from('reports')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('moderation_status', 'approved')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('report_follows')
+          .select('reports(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
       ])
         .then(([mine, following]) => {
           if (!active) return;
-          if (mine.status === 'fulfilled') setMyReports(mine.value.data.reports);
-          if (following.status === 'fulfilled') setFollowedReports(following.value.data.reports);
+          if (!mine.error && mine.data) {
+            setMyReports(mine.data);
+          }
+          if (!following.error && following.data) {
+            const list = (following.data || [])
+              .map((item: any) => item.reports)
+              .filter(Boolean);
+            setFollowedReports(list);
+          }
         })
-        .catch(() => {})
-        .finally(() => { if (active) setLoadingReports(false); });
+        .catch((err) => {
+          console.error(err);
+        })
+        .finally(() => {
+          if (active) setLoadingReports(false);
+        });
       return () => { active = false; };
     }, [user])
   );
@@ -102,10 +122,15 @@ export default function ProfileScreen({ navigation }: any) {
           text: 'Hesabımı Sil', style: 'destructive', onPress: async () => {
             setDeleting(true);
             try {
-              await axios.delete(`${API_URL}/auth/account`);
+              const { error } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', user.id);
+              if (error) throw error;
               await logout();
               Alert.alert('Hesap silindi', 'Hesabın kalıcı olarak silindi.');
-            } catch {
+            } catch (err) {
+              console.error(err);
               setDeleting(false);
               Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
             }

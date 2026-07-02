@@ -1,12 +1,22 @@
 'use client';
 import useSWR from 'swr';
+import { supabase } from '../lib/supabase';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-const API = process.env.NEXT_PUBLIC_API_URL;
+const fetcher = async () => {
+  const { data, error } = await supabase
+    .from('stats_reporters')
+    .select('*')
+    .order('report_count', { ascending: false })
+    .order('total_metoo', { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return { reporters: data || [] };
+};
+
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function ReportersTable() {
-  const { data, isLoading } = useSWR(`${API}/api/stats/reporters`, fetcher, { refreshInterval: 120000 });
+  const { data, isLoading } = useSWR('stats_reporters', fetcher, { refreshInterval: 120000 });
   const reporters: any[] = data?.reporters || [];
 
   if (isLoading) return <div style={{ textAlign: 'center', padding: 40, color: '#9E9E9E', fontSize: 14 }}>Yükleniyor…</div>;

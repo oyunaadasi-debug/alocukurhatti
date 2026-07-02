@@ -6,13 +6,12 @@ import {
 import { Text } from '../components/AppText';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { C, R, S, elevation, severityColor, severityLabel } from '../theme';
 import { StatusBadge, MetaRow, SectionTitle, Divider } from '../components/ui';
-import { API_URL, WEB_URL } from '../config';
+import { supabase } from '../lib/supabase';
+import { WEB_URL } from '../config';
 import { belediyeFor, buildComplaintText, issueLabel, issueIcon, CIMER_URL, ALO_153 } from '../data/belediyeler';
 
 const PHOTO_PICKER_QUALITY = 0.55;
@@ -44,10 +43,48 @@ export default function ReportDetailScreen({ route, navigation }: any) {
 
   async function fetch() {
     try {
-      const { data } = await axios.get(`${API_URL}/reports/${reportId}`);
-      setReport(data);
-      setFollowing(Boolean(data.is_followed));
-    } catch {
+      const { data: reportData, error } = await supabase
+        .from('reports')
+        .select('*')
+        .eq('id', reportId)
+        .eq('moderation_status', 'approved')
+        .single();
+
+      if (error) throw error;
+
+      // Check if user is following this report
+      const { data: followData } = user
+        ? await supabase
+            .from('report_follows')
+            .select('id')
+            .eq('report_id', reportId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+        : { data: null };
+
+      // Fetch resolutions
+      const { data: resolutionsData } = await supabase
+        .from('resolutions')
+        .select('*')
+        .eq('report_id', reportId)
+        .order('created_at', { ascending: false });
+
+      // Fetch updates
+      const { data: updatesData } = await supabase
+        .from('report_updates')
+        .select('*')
+        .eq('report_id', reportId)
+        .order('created_at', { ascending: false });
+
+      setReport({
+        ...reportData,
+        is_followed: !!followData,
+        resolutions: resolutionsData || [],
+        updates: updatesData || [],
+      });
+      setFollowing(!!followData);
+    } catch (err) {
+      console.error(err);
       Alert.alert('Hata', 'Rapor yüklenemedi.');
     } finally {
       setLoading(false);
@@ -58,10 +95,26 @@ export default function ReportDetailScreen({ route, navigation }: any) {
     if (voted) return;
     setVoting(true);
     try {
-      const { data } = await axios.post(`${API_URL}/reports/${reportId}/metoo`);
-      setReport((p: any) => ({ ...p, me_too_count: data.me_too_count }));
+      // 1. Insert me_too log
+      const { error: voteErr } = await supabase.from('me_too').insert({
+        report_id: reportId,
+        user_id: user?.id || null,
+      });
+      if (voteErr) throw voteErr;
+
+      // 2. Increment me_too_count
+      const { data: updatedReport, error: updateErr } = await supabase
+        .from('reports')
+        .update({ me_too_count: (report.me_too_count || 0) + 1 })
+        .eq('id', reportId)
+        .select('me_too_count')
+        .single();
+      if (updateErr) throw updateErr;
+
+      setReport((p: any) => ({ ...p, me_too_count: updatedReport.me_too_count }));
       setVoted(true);
-    } catch {
+    } catch (err) {
+      console.error(err);
       Alert.alert('Hata', 'Oyunuz kaydedilemedi.');
     } finally {
       setVoting(false);
@@ -79,13 +132,25 @@ export default function ReportDetailScreen({ route, navigation }: any) {
     setFollowBusy(true);
     try {
       if (following) {
-        await axios.delete(`${API_URL}/reports/${reportId}/follow`);
+        const { error } = await supabase
+          .from('report_follows')
+          .delete()
+          .eq('report_id', reportId)
+          .eq('user_id', user.id);
+        if (error) throw error;
         setFollowing(false);
       } else {
-        await axios.post(`${API_URL}/reports/${reportId}/follow`);
+        const { error } = await supabase
+          .from('report_follows')
+          .insert({
+            report_id: reportId,
+            user_id: user.id,
+          });
+        if (error) throw error;
         setFollowing(true);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       Alert.alert('Hata', 'Takip tercihi kaydedilemedi.');
     } finally {
       setFollowBusy(false);
@@ -102,10 +167,14 @@ export default function ReportDetailScreen({ route, navigation }: any) {
         { text: 'İptal', style: 'cancel' },
         { text: 'Bildir', style: 'destructive', onPress: async () => {
           try {
-            await axios.post(`${API_URL}/reports/${reportId}/flag`);
+            const { error } = await supabase.from('report_flags').insert({
+              report_id: reportId,
+            });
+            if (error) throw error;
             setFlagged(true);
             Alert.alert('Teşekkürler', 'Bildiriminiz alındı. İçerik moderasyon ekibimizce incelenecek.');
-          } catch {
+          } catch (err) {
+            console.error(err);
             Alert.alert('Hata', 'Bildirim gönderilemedi. Lütfen tekrar deneyin.');
           }
         } },
@@ -117,32 +186,49 @@ export default function ReportDetailScreen({ route, navigation }: any) {
   async function postUpdate(updateType: 'still_unresolved' | 'resolution_proof', photoUri?: string) {
     setUpdating(true);
     try {
+      let publicUrl = null;
+      let filePath = null;
+
       if (photoUri) {
-        const res = await FileSystem.uploadAsync(`${API_URL}/reports/${reportId}/updates`, photoUri, {
-          httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-          fieldName: 'photo',
-          mimeType: 'image/jpeg',
-          parameters: { update_type: updateType },
-        });
-        if (res.status < 200 || res.status >= 300) {
-          let msg = 'Güncelleme gönderilemedi.';
-          try { msg = JSON.parse(res.body)?.error || msg; } catch {}
-          Alert.alert('Hata', msg);
-          return;
-        }
-      } else {
-        const fd = new FormData();
-        fd.append('update_type', updateType);
-        await axios.post(`${API_URL}/reports/${reportId}/updates`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          timeout: 30000,
-        });
+        // 1. Upload to Supabase Storage
+        const response = await global.fetch(photoUri);
+        const blob = await response.blob();
+        
+        const fileExt = photoUri.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileName = `${Date.now()}_update_${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+        filePath = `updates/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('reports')
+          .upload(filePath, blob, {
+            contentType: 'image/jpeg',
+          });
+        
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: url } } = supabase.storage
+          .from('reports')
+          .getPublicUrl(filePath);
+        publicUrl = url;
       }
+
+      // 2. Insert into Database
+      const { error: insertError } = await supabase
+        .from('report_updates')
+        .insert({
+          report_id: reportId,
+          update_type: updateType,
+          photo_url: publicUrl,
+          photo_public_id: filePath,
+        });
+
+      if (insertError) throw insertError;
+
       await fetch();
       Alert.alert('Teşekkürler!', 'Güncellemeniz kaydedildi.');
     } catch (err: any) {
-      Alert.alert('Hata', err.response?.data?.error || 'Güncelleme gönderilemedi.');
+      console.error(err);
+      Alert.alert('Hata', 'Güncelleme gönderilemedi.');
     } finally {
       setUpdating(false);
     }

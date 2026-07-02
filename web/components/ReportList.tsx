@@ -2,9 +2,20 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
+import Image from 'next/image';
+import { supabase } from '../lib/supabase';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-const API = process.env.NEXT_PUBLIC_API_URL;
+const fetcher = async (status: string) => {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('moderation_status', 'approved')
+    .eq('status', status)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return { reports: data || [] };
+};
 
 const STATUS_COLOR: Record<string, string> = {
   open: '#E53935', forwarded: '#F57F17', reviewing: '#1565C0', resolved: '#2E7D32',
@@ -20,7 +31,7 @@ const SEVERITY_STYLE: Record<string, { label: string; color: string; bg: string 
 
 export default function ReportList() {
   const [status, setStatus] = useState('open');
-  const { data, isLoading } = useSWR(`${API}/api/reports?status=${status}&limit=50`, fetcher, { refreshInterval: 60000 });
+  const { data, isLoading } = useSWR(['reports', status], () => fetcher(status), { refreshInterval: 60000 });
   const reports = data?.reports || [];
 
   return (
@@ -52,7 +63,7 @@ export default function ReportList() {
           <Link key={r.id} href={`/reports/${r.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', borderRadius: 14, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.07)', display: 'flex', gap: 14, alignItems: 'flex-start', cursor: 'pointer' }}>
               {r.photo_url && (
-                <img src={r.photo_url} alt="" style={{ width: 80, height: 80, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                <Image src={r.photo_url} alt="Çukur" width={80} height={80} style={{ borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>

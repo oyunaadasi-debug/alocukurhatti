@@ -8,11 +8,10 @@ import { Text } from '../components/AppText';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { C, R, S, elevation, severityColor, severityLabel } from '../theme';
 import { PillBtn, Divider, SectionTitle } from '../components/ui';
-import { API_URL } from '../config';
+import { supabase } from '../lib/supabase';
 import { ISSUE_TYPES, issueLabel } from '../data/belediyeler';
 
 const SEVERITIES = [
@@ -139,37 +138,60 @@ export default function AddReportScreen({ route, navigation }: any) {
 
     setSubmit(true);
     try {
-      const params: Record<string, string> = {
-        lat: String(coords.lat),
-        lng: String(coords.lng),
-        issue_type: issueType,
-        severity,
-      };
-      if (description) params.description = description;
-      if (name)        params.reporter_name = name;
-      if (address)     params.address = address;
-      if (city)        params.city = city;
-      if (district)    params.district = district;
+      // 1. Get blob representation of local image file
+      const response = await fetch(photo);
+      const blob = await response.blob();
+      
+      const fileExt = photo.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
 
-      const res = await FileSystem.uploadAsync(`${API_URL}/reports`, photo, {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'photo',
-        mimeType: 'image/jpeg',
-        parameters: params,
-      });
+      // 2. Upload file to Supabase Storage Bucket
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('reports')
+        .upload(filePath, blob, {
+          contentType: 'image/jpeg',
+        });
+      
+      if (uploadError) throw uploadError;
 
-      if (res.status >= 200 && res.status < 300) {
-        Alert.alert('Teşekkürler!', 'Raporunuz alındı. Haritada görünecek.', [
-          { text: 'Tamam', onPress: () => navigation.goBack() },
-        ]);
-      } else {
-        let msg = 'Rapor gönderilemedi.';
-        try { msg = JSON.parse(res.body)?.error || msg; } catch {}
-        Alert.alert('Hata', msg);
-      }
+      // 3. Retrieve public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('reports')
+        .getPublicUrl(filePath);
+
+      // 4. Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+
+      // 5. Insert report details directly into Database
+      const { error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          lat: coords.lat,
+          lng: coords.lng,
+          issue_type: issueType,
+          severity,
+          description: description || null,
+          reporter_name: name || null,
+          address: address || null,
+          city: city || null,
+          district: district || null,
+          photo_url: publicUrl,
+          photo_public_id: filePath,
+          user_id: userId,
+          status: 'open',
+          moderation_status: 'approved',
+        });
+
+      if (insertError) throw insertError;
+
+      Alert.alert('Teşekkürler!', 'Raporunuz alındı. Haritada görünecek.', [
+        { text: 'Tamam', onPress: () => navigation.goBack() },
+      ]);
     } catch (err: any) {
-      Alert.alert('Hata', 'Rapor gönderilemedi. İnternet bağlantınızı kontrol edin.');
+      console.error(err);
+      Alert.alert('Hata', 'Rapor gönderilemedi. Lütfen bağlantınızı kontrol edin.');
     } finally {
       setSubmit(false);
     }

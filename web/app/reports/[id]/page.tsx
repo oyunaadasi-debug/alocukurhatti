@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import ReportActions from '@/components/ReportActions';
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { supabase } from '@/lib/supabase';
 
 const ISSUE_TYPE_MAP: Record<string, { emoji: string; label: string }> = {
   cukur:         { emoji: '🕳️', label: 'Çukur' },
@@ -41,9 +40,14 @@ const SEVERITY_STYLE: Record<string, { label: string; color: string; bg: string 
 };
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const res = await fetch(`${API}/api/reports/${params.id}`, { next: { revalidate: 60 } });
-  if (!res.ok) return { title: 'Rapor Bulunamadı' };
-  const report = await res.json();
+  const { data: report } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('id', params.id)
+    .eq('moderation_status', 'approved')
+    .single();
+
+  if (!report) return { title: 'Rapor Bulunamadı' };
   const iInfo = ISSUE_TYPE_MAP[report.issue_type] || ISSUE_TYPE_MAP.cukur;
   const sev = SEVERITY_STYLE[report.severity] || SEVERITY_STYLE.medium;
   const place = [report.address, report.district, report.city].filter(Boolean).join(', ') || 'Türkiye';
@@ -67,12 +71,24 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://web-ten-kappa-37.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://alocukurhatti.xyz';
 
 export default async function ReportPage({ params }: { params: { id: string } }) {
-  const res = await fetch(`${API}/api/reports/${params.id}`, { next: { revalidate: 60 } });
-  if (!res.ok) notFound();
-  const report = await res.json();
+  const { data: report } = await supabase
+    .from('reports')
+    .select('*, resolutions(*), updates:report_updates(*)')
+    .eq('id', params.id)
+    .eq('moderation_status', 'approved')
+    .single();
+
+  if (!report) notFound();
+
+  if (report.resolutions) {
+    report.resolutions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (report.updates) {
+    report.updates.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
 
   const statusColor = STATUS_COLOR[report.status] || '#9E9E9E';
   const statusLabel = STATUS_LABEL[report.status] || report.status;

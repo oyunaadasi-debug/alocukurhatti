@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import axios from 'axios';
-import { API_URL } from '../config';
-
-const TOKEN_KEY = 'auth_token';
+import { supabase } from '../lib/supabase';
 
 type User = {
-  id: number;
+  id: string;
   email: string;
   name: string | null;
   role: string;
@@ -29,44 +25,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const saved = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (saved) {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${saved}`;
-          const { data } = await axios.get(`${API_URL}/auth/me`);
-          setToken(saved);
-          setUser(data);
-        }
-      } catch {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-      } finally {
-        setLoading(false);
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name || null,
+          role: session.user.user_metadata?.role || 'citizen',
+        });
       }
-    })();
+      setLoading(false);
+    });
+
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setToken(session.access_token);
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name || null,
+          role: session.user.user_metadata?.role || 'citizen',
+        });
+      } else {
+        setToken(null);
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function login(email: string, password: string) {
-    const { data } = await axios.post(`${API_URL}/auth/login`, { email, password });
-    await SecureStore.setItemAsync(TOKEN_KEY, data.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    setToken(data.token);
-    setUser(data.user);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
   }
 
   async function register(email: string, password: string, name: string) {
-    const { data } = await axios.post(`${API_URL}/auth/register`, { email, password, name });
-    await SecureStore.setItemAsync(TOKEN_KEY, data.token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    setToken(data.token);
-    setUser(data.user);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          role: 'citizen',
+        }
+      }
+    });
+    if (error) throw new Error(error.message);
   }
 
   async function logout() {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    delete axios.defaults.headers.common['Authorization'];
-    setToken(null);
-    setUser(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(error.message);
   }
 
   return (
@@ -81,3 +95,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 }
+

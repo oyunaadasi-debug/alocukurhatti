@@ -1,8 +1,8 @@
 export const API_URL = 'https://backend-mu-seven-26.vercel.app/api';
-export const WEB_URL = 'https://web-ten-kappa-37.vercel.app';
-export const PRIVACY_URL = 'https://web-ten-kappa-37.vercel.app/kvkk';
-export const TERMS_URL = 'https://web-ten-kappa-37.vercel.app/kullanim-kosullari';
-export const SUPPORT_URL = 'https://web-ten-kappa-37.vercel.app/destek';
+export const WEB_URL = 'https://alocukurhatti.xyz';
+export const PRIVACY_URL = 'https://alocukurhatti.xyz/kvkk';
+export const TERMS_URL = 'https://alocukurhatti.xyz/kullanim-kosullari';
+export const SUPPORT_URL = 'https://alocukurhatti.xyz/destek';
 
 // Mapbox public token (pk.***) — fill in after logging into mapbox.com
 export const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? '';

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase';
 
 export default function KayitPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -12,14 +13,17 @@ export default function KayitPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            name: form.name,
+            role: 'citizen',
+          }
+        }
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Kayıt başarısız');
-      localStorage.setItem('token', data.token);
+      if (error) throw error;
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message);

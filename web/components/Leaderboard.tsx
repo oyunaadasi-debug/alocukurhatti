@@ -1,13 +1,17 @@
 'use client';
 import useSWR from 'swr';
+import { supabase } from '../lib/supabase';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-const API = process.env.NEXT_PUBLIC_API_URL;
+const fetcher = async () => {
+  const { data, error } = await supabase.from('stats_by_city').select('*');
+  if (error) throw error;
+  return { cities: data || [] };
+};
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Leaderboard() {
-  const { data, isLoading } = useSWR(`${API}/api/stats/cities`, fetcher, { refreshInterval: 60000 });
+  const { data, isLoading } = useSWR('stats_by_city', fetcher, { refreshInterval: 60000 });
   const cities: any[] = data?.cities || [];
   const sorted = [...cities].sort((a, b) => parseInt(b.open_count) - parseInt(a.open_count));
   const max = sorted[0] ? parseInt(sorted[0].open_count) : 1;
